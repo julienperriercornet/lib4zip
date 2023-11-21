@@ -16,7 +16,7 @@ int test_lzaahe_sort()
 {
     int status = 0;
 
-    uint32_t *testarray = (uint32_t*) aligned_alloc( 256, 8*sizeof(uint32_t) );
+    uint32_t *testarray = (uint32_t*) align_alloc( 256, 8*sizeof(uint32_t) );
 
     if (testarray != nullptr)
     {
@@ -64,7 +64,7 @@ int test_lzaahe_sort()
         if (testarray[6] != 0x45) status |= 1;
         if (testarray[7] != 0x0) status |= 1;
 
-        free( testarray );
+        align_free( testarray );
     }
 
     return status;

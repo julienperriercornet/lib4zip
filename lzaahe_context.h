@@ -2,6 +2,7 @@
 
 
 #include "arith.h"
+#include "platform.h"
 
 
 #define LZAAHE_BLOCK_SZ (1<<22)
