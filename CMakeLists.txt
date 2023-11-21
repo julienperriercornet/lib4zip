@@ -5,8 +5,6 @@ project(
     VERSION 0.01
     LANGUAGES CXX)
 
-find_package(Catch2 CONFIG REQUIRED)
-
 include(CTest)
 
 set(
