@@ -11,6 +11,9 @@
 #include "../lzaahe_common.h"
 
 
+extern int test_arith32();
+extern int test_arith64();
+
 
 int test_lzaahe_sort()
 {
@@ -97,6 +100,10 @@ int main( int argc, const char** argv )
         status = test_lzaahe_context();
     else if (strcmp(argv[1], "test_lzaahe_sort") == 0)
         status = test_lzaahe_sort();
+    else if (strcmp(argv[1], "test_arith32") == 0)
+        status = test_arith32();
+    else if (strcmp(argv[1], "test_arith64") == 0)
+        status = test_arith64();
 
     return status;
 }
