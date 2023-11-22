@@ -97,3 +97,66 @@ static void lzaahe_insertionSingleSort( uint32_t* dictionnary, uint32_t ind, uin
         i++;
     }
 }
+
+
+static inline uint32_t lzaahe_probaGamble( uint32_t sum_1, uint32_t sum )
+{
+    if (sum_1 == 0) return 0;
+    uint32_t p = (uint32_t) (((((uint64_t) sum_1) << ARITH_PRECISION) - (sum_1 << 1)) / sum) + 1;
+    return p;
+}
+
+
+static void lzaahe_updateProbaTables( uint32_t* dict, uint32_t** tables, uint32_t** tmp )
+{
+    memset( tables[0], 0, 256*sizeof(uint32_t) );
+    memset( tmp[0], 0, 256*sizeof(uint32_t) );
+
+    for (uint32_t i=0; i<256; i++)
+    {
+        uint32_t currentstat = dict[i] >> 8;
+
+        tmp[0][0] += currentstat;
+        tables[0][0] += i & 0x1 ? currentstat : 0;
+        tmp[1][i&0x1] += currentstat;
+        tables[1][i&0x1] += i & 0x2 ? currentstat : 0;
+        tmp[2][i&0x3] += currentstat;
+        tables[2][i&0x3] += i & 0x4 ? currentstat : 0;
+        tmp[3][i&0x7] += currentstat;
+        tables[3][i&0x7] += i & 0x8 ? currentstat : 0;
+        tmp[4][i&0xF] += currentstat;
+        tables[4][i&0xF] += i & 0x10 ? currentstat : 0;
+        tmp[5][i&0x1F] += currentstat;
+        tables[5][i&0x1F] += i & 0x20 ? currentstat : 0;
+        tmp[6][i&0x3F] += currentstat;
+        tables[6][i&0x3F] += i & 0x40 ? currentstat : 0;
+        tmp[7][i&0x7F] += currentstat;
+        tables[7][i&0x7F] += i & 0x80 ? currentstat : 0;
+    }
+
+    for (uint32_t i=0; i<256; i++)
+    {
+        tables[0][i] = lzaahe_probaGamble( tables[0][i], tmp[0][i] );
+    }
+}
+
+
+static void lzaahe_bufferStats( uint32_t* dictionnary, uint8_t* reverse_dictionnary, uint32_t** tables, uint32_t** tmp )
+{
+#if 1
+    lzaahe_bubbleSort( dictionnary, 256 );
+#else
+    qsort( dictionnary, 256, sizeof(uint32_t), qsort_dictionnary_func_stable );
+#endif
+
+    if (tables != nullptr && tmp != nullptr)
+    {
+        lzaahe_updateProbaTables( dictionnary, tables, tmp );
+    }
+
+    if (reverse_dictionnary != nullptr)
+    {
+        for (uint32_t i=0; i<256; i++)
+            reverse_dictionnary[dictionnary[i] & 0xFF] = i;
+    }
+}
