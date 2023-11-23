@@ -160,3 +160,19 @@ static void lzaahe_bufferStats( uint32_t* dictionnary, uint8_t* reverse_dictionn
             reverse_dictionnary[dictionnary[i] & 0xFF] = i;
     }
 }
+
+
+static uint32_t lzaahe_potHigher( uint32_t n )
+{
+    uint32_t low = 0, high = 32;
+
+    while ((high - low) != 0)
+    {
+        if (n < (1<<((high - low) >> 1))) { high = (high - low) >> 1; }
+        else { low = (high - low) >> 1; }
+    }
+
+    return high;
+}
+
+

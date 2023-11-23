@@ -16,27 +16,13 @@ static void makeStats( uint8_t *buffer, uint32_t size, uint32_t *stats )
 }
 
 
-static uint32_t potHigher( uint32_t n )
-{
-    uint32_t low = 0, high = 32;
-
-    while ((high - low) != 0)
-    {
-        if (n < (1<<((high - low) >> 1))) { high = (high - low) >> 1; }
-        else { low = (high - low) >> 1; }
-    }
-
-    return high;
-}
-
-
 static void writeHeader( uint32_t *stats, struct ArithCtx *arith )
 {
-    uint32_t highestPot = potHigher( stats[0] );
+    uint32_t highestPot = lzaahe_potHigher( stats[0] );
 
     for (uint32_t i=1; i<256; i++)
     {
-        unsigned int pot = potHigher( stats[i] );
+        unsigned int pot = lzaahe_potHigher( stats[i] );
         if (pot > highestPot) highestPot = pot;
     }
 
