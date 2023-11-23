@@ -60,4 +60,6 @@ extern "C" void lzaaheDecode( struct LZAAHEContext* ctx )
         ctx->outputBlock[i] = sym;
     }
 
+    ctx->outputSize = size;
 }
+
