@@ -86,7 +86,7 @@ extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
 
         for (uint32_t j=0; j<8; j++)
         {
-            arith_encodebit( ctx->arithEncoder, ctx->proba_tables[j][j==0?0:current&(1<<(j-1))], (current&(1<<j))>>j);
+            arith_encodebit( ctx->arithEncoder, ctx->proba_tables[j][current&((1<<j)-1)], (current&(1<<j))>>j);
         }
     }
 
