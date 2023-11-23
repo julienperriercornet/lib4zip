@@ -43,6 +43,8 @@ extern "C" void deallocateLZAAHEContext( LZAAHEContext* ctx )
     if (ctx->stats != nullptr) align_free(ctx->stats);
     if (ctx->proba_tables != nullptr && ctx->proba_tables[0] != nullptr) align_free(ctx->proba_tables[0]);
     if (ctx->proba_tables != nullptr) align_free(ctx->proba_tables);
+    if (ctx->tmp_tables != nullptr && ctx->tmp_tables[0] != nullptr) align_free(ctx->tmp_tables[0]);
+    if (ctx->tmp_tables != nullptr) align_free(ctx->tmp_tables);
     if (ctx->inputBlock != nullptr) align_free(ctx->inputBlock);
     if (ctx->outputBlock != nullptr) align_free(ctx->outputBlock);
     if (ctx->arithEncoder != nullptr) align_free(ctx->arithEncoder);
@@ -80,6 +82,18 @@ extern "C" LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
             context->proba_tables[5] = context->proba_tables[0] + 31;
             context->proba_tables[6] = context->proba_tables[0] + 63;
             context->proba_tables[7] = context->proba_tables[0] + 127;
+        }
+        context->tmp_tables = (uint32_t**) align_alloc( 256, 8*sizeof(uint32_t*) );
+        if (context->tmp_tables)
+        {
+            context->tmp_tables[0] = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
+            context->tmp_tables[1] = context->tmp_tables[0] + 1;
+            context->tmp_tables[2] = context->tmp_tables[0] + 3;
+            context->tmp_tables[3] = context->tmp_tables[0] + 7;
+            context->tmp_tables[4] = context->tmp_tables[0] + 15;
+            context->tmp_tables[5] = context->tmp_tables[0] + 31;
+            context->tmp_tables[6] = context->tmp_tables[0] + 63;
+            context->tmp_tables[7] = context->tmp_tables[0] + 127;
         }
         context->inputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
         context->outputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );

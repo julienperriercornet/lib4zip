@@ -15,6 +15,8 @@ set(
     lzaahe_common.h
     lzaahe_context.h
     lzaahe_context.cpp
+    lzaahe_encode.h
+    lzaahe_encode.cpp
     platform.h)
 
 add_library( 4zip STATIC ${SOURCE_FILES} )

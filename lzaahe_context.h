@@ -23,6 +23,7 @@ struct LZAAHEContext {
     uint8_t *reverse_dictionnary;
     uint32_t *stats;
     uint32_t **proba_tables;
+    uint32_t **tmp_tables;
     uint8_t *inputBlock;
     uint8_t *outputBlock;
     uint32_t outputSize;

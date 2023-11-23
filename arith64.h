@@ -4,6 +4,13 @@
 #include <cstdint>
 
 
+//#define ARITH_DEBUG
+
+#ifdef ARITH_DEBUG
+#include <cassert>
+#endif
+
+
 #define ARITH_PRECISION 30
 
 
