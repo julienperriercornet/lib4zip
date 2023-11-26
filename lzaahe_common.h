@@ -166,10 +166,11 @@ static uint32_t lzaahe_potHigher( uint32_t n )
 {
     uint32_t low = 0, high = 32;
 
-    while ((high - low) != 0)
+    for (uint32_t i=0; i<5; i++)
     {
-        if (n < (1<<((high - low) >> 1))) { high = (high - low) >> 1; }
-        else { low = (high - low) >> 1; }
+        uint32_t mid = ((high - low) >> 1) + low;
+        if (n < (1 << mid)) { high = mid; }
+        else { low = mid; }
     }
 
     return high;

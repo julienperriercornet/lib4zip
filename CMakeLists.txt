@@ -9,6 +9,7 @@ include(CTest)
 
 set(
     SOURCE_FILES
+    lib4zip.h
     arith.h
     arith32.h
     arith64.h
@@ -22,6 +23,8 @@ set(
     platform.h)
 
 add_library( 4zip STATIC ${SOURCE_FILES} )
+
+add_subdirectory(sample)
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(test)

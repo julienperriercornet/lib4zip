@@ -25,8 +25,8 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 9:
         case 10:
         default:
-            options.lzMethod = 1;
-            options.huffMethod = 1;
+            options.lzMethod = LZAAHEDictTwo;
+            options.huffMethod = LZAAHEHuffStd;
             options.useLzArith = true;
             options.useHArith = true;
             break;
@@ -36,7 +36,7 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
 }
 
 
-extern "C" void deallocateLZAAHEContext( LZAAHEContext* ctx )
+extern "C" void deallocateLZAAHEContext( struct LZAAHEContext* ctx )
 {
     if (ctx->dict != nullptr) align_free(ctx->dict);
     if (ctx->reverse_dictionnary != nullptr) align_free(ctx->reverse_dictionnary);
@@ -52,7 +52,7 @@ extern "C" void deallocateLZAAHEContext( LZAAHEContext* ctx )
 }
 
 
-extern "C" LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
+extern "C" struct LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
 {
     struct LZAAHEContext* context = (struct LZAAHEContext*) align_alloc( 256, sizeof(struct LZAAHEContext) );
 
@@ -62,6 +62,7 @@ extern "C" LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
         context->reverse_dictionnary = nullptr;
         context->stats = nullptr;
         context->proba_tables = nullptr;
+        context->tmp_tables = nullptr;
         context->inputBlock = nullptr;
         context->outputBlock = nullptr;
         context->arithEncoder = nullptr;
@@ -100,6 +101,7 @@ extern "C" LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
         context->arithEncoder = (struct ArithCtx*) align_alloc( 256, sizeof(struct ArithCtx) );
 
         if (context->dict == nullptr || context->reverse_dictionnary == nullptr || context->stats == nullptr ||
+            context->tmp_tables == nullptr || context->tmp_tables[0] == nullptr ||
             context->proba_tables == nullptr || context->proba_tables[0] == nullptr || context->inputBlock == nullptr ||
             context->outputBlock == nullptr || context->arithEncoder == nullptr)
         {
