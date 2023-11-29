@@ -66,6 +66,7 @@ extern "C" struct LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLeve
         context->inputBlock = nullptr;
         context->outputBlock = nullptr;
         context->arithEncoder = nullptr;
+        context->lzdict = nullptr;
 
         context->options = getLZAAHEOptions( compressionLevel );
 

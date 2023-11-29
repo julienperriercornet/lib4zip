@@ -16,6 +16,8 @@ set(
     lzaahe_common.h
     lzaahe_context.h
     lzaahe_context.cpp
+    lzaahe_dict.h
+    lzaahe_dict.cpp
     lzaahe_encode.h
     lzaahe_encode.cpp
     lzaahe_decode.h

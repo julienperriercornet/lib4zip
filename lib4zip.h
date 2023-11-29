@@ -5,12 +5,13 @@
 
 
 struct ArithCtx;
+struct LZAAHEDict;
 
 
 #define LZAAHE_BLOCK_SZ (1<<22)
 
 
-enum LZAAHEDict {
+enum LZAAHEDictEnum {
     LZAAHEDictNone = 0,
     LZAAHEDictOne,
     LZAAHEDictTwo,
@@ -37,6 +38,9 @@ struct LZAAHEOptions {
 };
 
 
+struct LZAAHEDict;
+
+
 struct LZAAHEContext {
     uint32_t *dict;
     uint8_t *reverse_dictionnary;
@@ -48,6 +52,7 @@ struct LZAAHEContext {
     uint32_t outputSize;
     uint32_t inputSize;
     struct ArithCtx *arithEncoder;
+    struct LZAAHEDict *lzdict;
     struct LZAAHEOptions options;
 };
 
