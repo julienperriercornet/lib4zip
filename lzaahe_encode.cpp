@@ -1,10 +1,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <time.h>
 
 
 #include "lzaahe_encode.h"
 #include "lzaahe_common.h"
+#include "lzaahe_dict.h"
 
 
 static void makeStats( uint8_t *buffer, uint32_t size, uint32_t *stats )
@@ -46,6 +48,17 @@ static void writeHeader( uint32_t *stats, struct ArithCtx *arith )
 extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
 {
     uint32_t size = ctx->inputSize;
+
+#if 0
+    clock_t start = clock();
+    initLZAAHEDict( ctx->lzdict );
+    uint32_t lz_init_ms = (uint32_t) 1000 * double(clock() - start) / CLOCKS_PER_SEC;
+    start = clock();
+    lzaaheGatherOccurences( ctx->lzdict, ctx->inputBlock, size );
+    uint32_t lz_gather_ms = (uint32_t) 1000 * double(clock() - start) / CLOCKS_PER_SEC;
+
+    printf( "init: %dms gather: %dms\n", lz_init_ms, lz_gather_ms );
+#endif
 
     // First write the uncompressed size
     ctx->outputBlock[0] = (size & 0xFF);

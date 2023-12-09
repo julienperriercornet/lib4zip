@@ -9,6 +9,7 @@ struct LZAAHEDict;
 
 
 #define LZAAHE_BLOCK_SZ (1<<22)
+#define LZAAHE_OUTPUT_SZ ((1<<22) + (1<<19))
 
 
 enum LZAAHEDictEnum {

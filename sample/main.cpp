@@ -47,7 +47,7 @@ void decompress( FILE* in, FILE* out )
         to_read += fgetc(in) << 16;
 
         while ( !feof(in) && to_read > 0 &&
-            to_read < LZAAHE_BLOCK_SZ &&
+            to_read < LZAAHE_OUTPUT_SZ &&
             to_read == fread( ctx->inputBlock, 1, to_read, in ) )
         {
             ctx->inputSize = to_read;

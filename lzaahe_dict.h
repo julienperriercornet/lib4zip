@@ -4,7 +4,7 @@
 #include <cstdint>
 
 
-#define MAX_SYMBOLS 65536
+#define MAX_SYMBOLS (1<<17)
 #define MAX_SYM_TABLE_LEN 65536*16
 #define SYM_HASH_SZ ((1<<22)+16)
 
@@ -30,22 +30,23 @@ struct LZAAHEDict {
             uint32_t longest_match_len; // Longest match length
             uint32_t occurences[2];
             uint32_t next_idx; // Next index of a node within the linked list (-1 is the null element)
-        };
+        } f;
         struct follow {
             uint32_t type;
             uint32_t occurences[6];
             uint32_t next_idx; // Next index of a node within the linked list (-1 is the null element)
-        };
+        } o;
     };
 
     union LZAAHEDictOccurenceListEntry *occurence_list;
     uint32_t last_occurence_pos;
 
-    struct LZAAHEDictFirstOcc {
+    struct LZAAHEDictHashOcc {
         uint32_t sym, pos;
     };
 
-    struct LZAAHEDictFirstOcc* first_occ_hash;
+    struct LZAAHEDictHashOcc* first_occ_hash;
+    struct LZAAHEDictHashOcc* hit_occ_hash;
 
 };
 
@@ -58,7 +59,7 @@ struct LZAAHEDictOccurence {
 extern "C" struct LZAAHEDict* allocateLZAAHEDict();
 extern "C" void freeLZAAHEDict(struct LZAAHEDict* dict);
 extern "C" void initLZAAHEDict(struct LZAAHEDict* dict);
-extern "C" void gatherOccurences(struct LZAAHEDict* dict, uint8_t* input, uint32_t size);
-extern "C" void writeOccurences(struct LZAAHEDict* dict, struct ArithCtx *arith);
-extern "C" void readOccurences(struct LZAAHEDict* dict, struct ArithCtx *arith, struct LZAAHEDictOccurence* occ, uint32_t *n_occurences, uint32_t max_occurences);
+extern "C" void lzaaheGatherOccurences(struct LZAAHEDict* dict, uint8_t* input, uint32_t size);
+extern "C" void lzaaheWriteOccurences(struct LZAAHEDict* dict, struct ArithCtx *arith);
+extern "C" void lzaaheReadOccurences(struct LZAAHEDict* dict, struct ArithCtx *arith, struct LZAAHEDictOccurence* occ, uint32_t *n_occurences, uint32_t max_occurences);
 
