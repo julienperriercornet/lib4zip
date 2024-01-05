@@ -7,31 +7,6 @@
 #include "lzaahe_common.h"
 
 
-static void readHeader(uint32_t *dict, struct ArithCtx *arith)
-{
-    uint32_t encodePot = 0;
-
-    // TODO: header is currently uncompressed
-    encodePot = arith_decodebit(arith, 1<<(ARITH_PRECISION-1));
-    encodePot |= arith_decodebit(arith, 1<<(ARITH_PRECISION-1)) << 1;
-    encodePot |= arith_decodebit(arith, 1<<(ARITH_PRECISION-1)) << 2;
-
-    uint32_t highestPot = encodePot + 15;
-
-    for (uint32_t i=0; i<256; i++)
-    {
-        uint32_t stat = 0;
-
-        for (uint32_t j=0; j<highestPot; j++)
-        {
-            stat |= arith_decodebit(arith, 1<<(ARITH_PRECISION-1)) << j;
-        }
-
-        dict[i] = (stat << 8) | i;
-    }
-}
-
-
 extern "C" void lzaaheDecode( struct LZAAHEContext* ctx )
 {
     uint32_t size = 0;
@@ -42,9 +17,10 @@ extern "C" void lzaaheDecode( struct LZAAHEContext* ctx )
 
     arith_init(ctx->arithEncoder, ctx->inputBlock+3, ctx->inputSize-3);
 
-    arith_prefetch(ctx->arithEncoder);
+    for (uint32_t i=0; i<256; i++)
+        ctx->dict[i] = (1 << 8) | i;
 
-    readHeader( ctx->dict, ctx->arithEncoder );
+    arith_prefetch(ctx->arithEncoder);
 
     lzaahe_bufferStats( ctx->dict, nullptr, ctx->proba_tables, ctx->tmp_tables );
 

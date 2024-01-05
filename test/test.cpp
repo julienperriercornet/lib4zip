@@ -76,11 +76,11 @@ int test_lzaahe_sort()
 
 int test_lzaahe_context()
 {
-    LZAAHEContext* context = allocateLZAAHEContext( 10 );
+    LZAAHEContext* context = lzaaheAllocate( 10 );
 
     if (context != nullptr)
     {
-        deallocateLZAAHEContext(context);
+        lzaaheDeallocate(context);
         return 0;
     }
     else

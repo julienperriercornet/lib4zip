@@ -143,11 +143,7 @@ static void lzaahe_updateProbaTables( uint32_t* dict, uint32_t** tables, uint32_
 
 static void lzaahe_bufferStats( uint32_t* dictionnary, uint8_t* reverse_dictionnary, uint32_t** tables, uint32_t** tmp )
 {
-#if 1
     lzaahe_bubbleSort( dictionnary, 256 );
-#else
-    qsort( dictionnary, 256, sizeof(uint32_t), qsort_dictionnary_func_stable );
-#endif
 
     if (tables != nullptr && tmp != nullptr)
     {

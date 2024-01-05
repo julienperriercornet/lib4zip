@@ -63,7 +63,7 @@ extern "C" void initLZAAHEDict(struct LZAAHEDict* dict)
 
 static inline uint32_t getHash( uint32_t h )
 {
-    return ((h >> 21) ^ (h & 0x1FFFFF)) << 1;
+    return ((h >> 19) ^ (h & 0x7FFFF)) << 1;
 }
 
 
@@ -232,6 +232,7 @@ static uint32_t symbolGain( union LZAAHEDict::LZAAHEDictOccurenceListEntry *occu
     uint32_t longest1 = occurences[symbol].f.longest_match1;
     uint32_t longest2 = occurences[symbol].f.longest_match2;
     uint32_t longest_len = occurences[symbol].f.longest_match_len;
+    uint32_t n_occurences = 0;
 
     do
     {
@@ -244,8 +245,10 @@ static uint32_t symbolGain( union LZAAHEDict::LZAAHEDictOccurenceListEntry *occu
                     len = matchlen( buffer, longest1, occurences[symbol].f.occurences[i], buffer_size );
                 else
                     len = matchlen( buffer, longest2, occurences[symbol].f.occurences[i], buffer_size );
-                if (len >= 4) gain += (len - 4);
+                if (i>0 && len >= 4) gain += len;
             }
+
+            n_occurences += 2;
         }
         else if (occurences[symbol].f.type == 2)
         {
@@ -258,16 +261,16 @@ static uint32_t symbolGain( union LZAAHEDict::LZAAHEDictOccurenceListEntry *occu
                         len = matchlen( buffer, longest1, occurences[symbol].o.occurences[i], buffer_size );
                     else
                         len = matchlen( buffer, longest2, occurences[symbol].o.occurences[i], buffer_size );
-                    if (len >= 4) gain += (len - 4);
+                    if (len >= 4) gain += len;
+                    n_occurences ++;
                 }
             }
         }
     }
     while ((symbol = occurences[symbol].f.next_idx) != -1) ;
 
-    if (gain > longest_len) return gain - longest_len - 1;
-
-    return 0;
+    if ((gain - (n_occurences - 1) * 3) >= 0) return gain - (n_occurences - 1) * 3;
+    else return 0;
 }
 
 
@@ -284,6 +287,7 @@ extern "C" void lzaaheGatherOccurences(struct LZAAHEDict* dict, uint8_t* input, 
         }
     }
 
+#if 1
     // Print occurences to the console (debug)
     uint32_t count_1=0, count_2=0, sum_gain=0;
 
@@ -303,6 +307,7 @@ extern "C" void lzaaheGatherOccurences(struct LZAAHEDict* dict, uint8_t* input, 
     }
 
     printf( "count_1 %d sum_gain: %d\n", count_1, sum_gain );
+#endif
 }
 
 

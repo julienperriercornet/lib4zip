@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 
 #include "lzaahe_context.h"
-#include "lzaahe_dict.h"
 
 
 static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
@@ -27,9 +27,7 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 10:
         default:
             options.lzMethod = LZAAHEDictTwo;
-            options.huffMethod = LZAAHEHuffStd;
-            options.useLzArith = true;
-            options.useHArith = true;
+            options.huffMethod = LZAAHEDynamicHuff;
             break;
     }
 
@@ -37,12 +35,15 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
 }
 
 
-extern "C" void deallocateLZAAHEContext( struct LZAAHEContext* ctx )
+extern "C" void lzaaheDeallocate( struct LZAAHEContext* ctx )
 {
-    if (ctx->lzdict) freeLZAAHEDict(ctx->lzdict);
+    if (ctx->bytehashcount != nullptr) align_free(ctx->bytehashcount);
+    if (ctx->bytehash != nullptr) align_free(ctx->bytehash);
+    if (ctx->ringbuffer != nullptr) align_free(ctx->ringbuffer);
+    if (ctx->refhash != nullptr) align_free(ctx->refhash);
+    if (ctx->refhashcount != nullptr) align_free(ctx->refhashcount);
     if (ctx->dict != nullptr) align_free(ctx->dict);
     if (ctx->reverse_dictionnary != nullptr) align_free(ctx->reverse_dictionnary);
-    if (ctx->stats != nullptr) align_free(ctx->stats);
     if (ctx->proba_tables != nullptr && ctx->proba_tables[0] != nullptr) align_free(ctx->proba_tables[0]);
     if (ctx->proba_tables != nullptr) align_free(ctx->proba_tables);
     if (ctx->tmp_tables != nullptr && ctx->tmp_tables[0] != nullptr) align_free(ctx->tmp_tables[0]);
@@ -54,27 +55,34 @@ extern "C" void deallocateLZAAHEContext( struct LZAAHEContext* ctx )
 }
 
 
-extern "C" struct LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLevel )
+extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 {
     struct LZAAHEContext* context = (struct LZAAHEContext*) align_alloc( 256, sizeof(struct LZAAHEContext) );
 
     if (context)
     {
+        context->bytehashcount = nullptr;
+        context->bytehash = nullptr;
+        context->ringbuffer = nullptr;
+        context->refhash = nullptr;
+        context->refhashcount = nullptr;
         context->dict = nullptr;
         context->reverse_dictionnary = nullptr;
-        context->stats = nullptr;
         context->proba_tables = nullptr;
         context->tmp_tables = nullptr;
         context->inputBlock = nullptr;
         context->outputBlock = nullptr;
         context->arithEncoder = nullptr;
-        context->lzdict = nullptr;
 
         context->options = getLZAAHEOptions( compressionLevel );
 
+        context->bytehashcount = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
+        context->bytehash = (uint32_t*) align_alloc( 256, LZAAHE_BYTEHASH_SZ*sizeof(uint32_t) );
+        context->ringbuffer = (uint32_t*) align_alloc( 256, LZAAHE_RINGBUFFER_SZ*sizeof(uint32_t) );
+        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( 256, LZAAHE_REFHASH_SZ*8*sizeof(struct LZAAHEContext::SymRef) );
+        context->refhashcount = (uint8_t*) align_alloc( 256, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
         context->dict = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
         context->reverse_dictionnary = (uint8_t*) align_alloc( 256, 256*sizeof(uint8_t) );
-        context->stats = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
         context->proba_tables = (uint32_t**) align_alloc( 256, 8*sizeof(uint32_t*) );
         if (context->proba_tables)
         {
@@ -99,19 +107,20 @@ extern "C" struct LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLeve
             context->tmp_tables[6] = context->tmp_tables[0] + 63;
             context->tmp_tables[7] = context->tmp_tables[0] + 127;
         }
+
         context->inputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
         context->outputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+
         context->arithEncoder = (struct ArithCtx*) align_alloc( 256, sizeof(struct ArithCtx) );
 
-        if (context->options.lzMethod == LZAAHEDictOne || context->options.lzMethod == LZAAHEDictTwo)
-            context->lzdict = allocateLZAAHEDict();
-
-        if (context->dict == nullptr || context->reverse_dictionnary == nullptr || context->stats == nullptr ||
+        if (context->bytehashcount == nullptr || context->bytehash == nullptr ||
+            context->ringbuffer == nullptr || context->refhash == nullptr || context->refhashcount == nullptr ||
+            context->dict == nullptr || context->reverse_dictionnary == nullptr ||
             context->tmp_tables == nullptr || context->tmp_tables[0] == nullptr ||
             context->proba_tables == nullptr || context->proba_tables[0] == nullptr || context->inputBlock == nullptr ||
             context->outputBlock == nullptr || context->arithEncoder == nullptr)
         {
-            deallocateLZAAHEContext( context );
+            lzaaheDeallocate( context );
             context = nullptr;
         }
     }
@@ -119,3 +128,9 @@ extern "C" struct LZAAHEContext* allocateLZAAHEContext( uint32_t compressionLeve
     return context;
 }
 
+
+extern "C" void lzaaheInit(struct LZAAHEContext* ctx)
+{
+    memset( ctx->bytehashcount, 0, 256*sizeof(uint32_t) );
+    memset( ctx->refhashcount, 0, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
+}

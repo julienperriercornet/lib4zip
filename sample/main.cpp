@@ -8,10 +8,12 @@
 
 void compress( FILE* in, FILE* out )
 {
-    struct LZAAHEContext* ctx = allocateLZAAHEContext( 10 );
+    struct LZAAHEContext* ctx = lzaaheAllocate( 10 );
 
     if (ctx)
     {
+        lzaaheInit( ctx );
+
         fseek( in, 0, SEEK_END );
         size_t remainsz = ftell( in );
         fseek( in, 0, SEEK_SET );
@@ -31,17 +33,19 @@ void compress( FILE* in, FILE* out )
             to_read = remainsz > LZAAHE_BLOCK_SZ ? LZAAHE_BLOCK_SZ : remainsz;
         }
 
-        deallocateLZAAHEContext(ctx);
+        lzaaheDeallocate(ctx);
     }
 }
 
 
 void decompress( FILE* in, FILE* out )
 {
-    struct LZAAHEContext* ctx = allocateLZAAHEContext( 10 );
+    struct LZAAHEContext* ctx = lzaaheAllocate( 10 );
 
     if (ctx)
     {
+        lzaaheInit( ctx );
+
         uint32_t to_read = fgetc(in);
         to_read += fgetc(in) << 8;
         to_read += fgetc(in) << 16;
@@ -60,7 +64,7 @@ void decompress( FILE* in, FILE* out )
             to_read += fgetc(in) << 16;
         }
 
-        deallocateLZAAHEContext(ctx);
+        lzaaheDeallocate(ctx);
     }
 }
 

@@ -4,9 +4,9 @@
 #include <cstdint>
 
 
-#define MAX_SYMBOLS (1<<17)
+#define MAX_SYMBOLS (1<<16)
 #define MAX_SYM_TABLE_LEN 65536*16
-#define SYM_HASH_SZ ((1<<22)+16)
+#define SYM_HASH_SZ ((1<<20)+16)
 
 
 struct LZAAHEDict {
