@@ -79,7 +79,7 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
         context->bytehashcount = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
         context->bytehash = (uint32_t*) align_alloc( 256, LZAAHE_BYTEHASH_SZ*sizeof(uint32_t) );
         context->ringbuffer = (uint32_t*) align_alloc( 256, LZAAHE_RINGBUFFER_SZ*sizeof(uint32_t) );
-        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( 256, LZAAHE_REFHASH_SZ*8*sizeof(struct LZAAHEContext::SymRef) );
+        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( 256, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHEContext::SymRef) );
         context->refhashcount = (uint8_t*) align_alloc( 256, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
         context->dict = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
         context->reverse_dictionnary = (uint8_t*) align_alloc( 256, 256*sizeof(uint8_t) );
