@@ -36,6 +36,7 @@ struct LZAAHEContext {
         uint32_t sym;
         uint32_t longest1;
         uint32_t longest2;
+        uint32_t hid;
     };
     uint32_t *bytehashcount;
     uint32_t *bytehash;

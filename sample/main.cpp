@@ -12,7 +12,6 @@ void compress( FILE* in, FILE* out )
 
     if (ctx)
     {
-        lzaaheInit( ctx );
 
         fseek( in, 0, SEEK_END );
         size_t remainsz = ftell( in );
@@ -23,6 +22,7 @@ void compress( FILE* in, FILE* out )
         while ( to_read > 0 && to_read == fread( ctx->inputBlock, 1, to_read, in ) )
         {
             ctx->inputSize = to_read;
+            lzaaheInit( ctx );
             lzaaheEncode( ctx );
             printf( "%d -> %d\n", ctx->inputSize, ctx->outputSize );
             fputc(ctx->outputSize & 0xFF, out);
@@ -44,7 +44,6 @@ void decompress( FILE* in, FILE* out )
 
     if (ctx)
     {
-        lzaaheInit( ctx );
 
         uint32_t to_read = fgetc(in);
         to_read += fgetc(in) << 8;
@@ -55,6 +54,7 @@ void decompress( FILE* in, FILE* out )
             to_read == fread( ctx->inputBlock, 1, to_read, in ) )
         {
             ctx->inputSize = to_read;
+            lzaaheInit( ctx );
             lzaaheDecode( ctx );
             printf( "%d -> %d\n", to_read, ctx->outputSize );
             fwrite( ctx->outputBlock, 1, ctx->outputSize, out );
