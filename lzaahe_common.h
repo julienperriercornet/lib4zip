@@ -99,6 +99,7 @@ static void lzaahe_insertionSingleSort( uint32_t* dictionnary, uint32_t ind, uin
 }
 
 
+#if 0
 static inline uint32_t lzaahe_probaGamble( uint32_t sum_1, uint32_t sum )
 {
     if (sum_1 == 0) return 0;
@@ -156,6 +157,7 @@ static void lzaahe_bufferStats( uint32_t* dictionnary, uint8_t* reverse_dictionn
             reverse_dictionnary[dictionnary[i] & 0xFF] = i;
     }
 }
+#endif
 
 
 static uint32_t lzaahe_potHigher( uint32_t n )

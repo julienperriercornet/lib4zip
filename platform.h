@@ -9,3 +9,5 @@
 #define align_free( A ) free( A )
 #endif
 
+
+#define MAX_CACHE_LINE_SIZE 256

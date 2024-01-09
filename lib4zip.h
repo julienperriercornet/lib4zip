@@ -4,11 +4,11 @@
 #include <cstdint>
 
 
-struct ArithCtx;
+struct BitIOCtx;
 
 
-#define LZAAHE_BLOCK_SZ (1<<22)
-#define LZAAHE_OUTPUT_SZ ((1<<22) + (1<<19))
+#define LZAAHE_BLOCK_SZ (1<<19)
+#define LZAAHE_OUTPUT_SZ ((1<<19) + (1<<17))
 
 
 enum LZAAHEDictEnum {
@@ -53,7 +53,7 @@ struct LZAAHEContext {
     uint8_t *outputBlock;
     uint32_t outputSize;
     uint32_t inputSize;
-    struct ArithCtx *arithEncoder;
+    struct BitIOCtx *io;
     struct LZAAHEOptions options;
 };
 #pragma pack()

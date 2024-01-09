@@ -50,7 +50,7 @@ extern "C" void lzaaheDeallocate( struct LZAAHEContext* ctx )
     if (ctx->tmp_tables != nullptr) align_free(ctx->tmp_tables);
     if (ctx->inputBlock != nullptr) align_free(ctx->inputBlock);
     if (ctx->outputBlock != nullptr) align_free(ctx->outputBlock);
-    if (ctx->arithEncoder != nullptr) align_free(ctx->arithEncoder);
+    if (ctx->io != nullptr) align_free(ctx->io);
     align_free( ctx );
 }
 
@@ -72,21 +72,21 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
         context->tmp_tables = nullptr;
         context->inputBlock = nullptr;
         context->outputBlock = nullptr;
-        context->arithEncoder = nullptr;
+        context->io = nullptr;
 
         context->options = getLZAAHEOptions( compressionLevel );
 
-        context->bytehashcount = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
-        context->bytehash = (uint32_t*) align_alloc( 256, LZAAHE_BYTEHASH_SZ*sizeof(uint32_t) );
-        context->ringbuffer = (uint32_t*) align_alloc( 256, LZAAHE_RINGBUFFER_SZ*sizeof(uint32_t) );
-        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( 256, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHEContext::SymRef) );
-        context->refhashcount = (uint8_t*) align_alloc( 256, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
-        context->dict = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
-        context->reverse_dictionnary = (uint8_t*) align_alloc( 256, 256*sizeof(uint8_t) );
-        context->proba_tables = (uint32_t**) align_alloc( 256, 8*sizeof(uint32_t*) );
+        context->bytehashcount = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
+        context->bytehash = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_BYTEHASH_SZ*sizeof(uint32_t) );
+        context->ringbuffer = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_RINGBUFFER_SZ*sizeof(uint32_t) );
+        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHEContext::SymRef) );
+        context->refhashcount = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
+        context->dict = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
+        context->reverse_dictionnary = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint8_t) );
+        context->proba_tables = (uint32_t**) align_alloc( MAX_CACHE_LINE_SIZE, 8*sizeof(uint32_t*) );
         if (context->proba_tables)
         {
-            context->proba_tables[0] = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
+            context->proba_tables[0] = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
             context->proba_tables[1] = context->proba_tables[0] + 1;
             context->proba_tables[2] = context->proba_tables[0] + 3;
             context->proba_tables[3] = context->proba_tables[0] + 7;
@@ -95,10 +95,10 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
             context->proba_tables[6] = context->proba_tables[0] + 63;
             context->proba_tables[7] = context->proba_tables[0] + 127;
         }
-        context->tmp_tables = (uint32_t**) align_alloc( 256, 8*sizeof(uint32_t*) );
+        context->tmp_tables = (uint32_t**) align_alloc( MAX_CACHE_LINE_SIZE, 8*sizeof(uint32_t*) );
         if (context->tmp_tables)
         {
-            context->tmp_tables[0] = (uint32_t*) align_alloc( 256, 256*sizeof(uint32_t) );
+            context->tmp_tables[0] = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
             context->tmp_tables[1] = context->tmp_tables[0] + 1;
             context->tmp_tables[2] = context->tmp_tables[0] + 3;
             context->tmp_tables[3] = context->tmp_tables[0] + 7;
@@ -108,17 +108,17 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
             context->tmp_tables[7] = context->tmp_tables[0] + 127;
         }
 
-        context->inputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
-        context->outputBlock = (uint8_t*) align_alloc( 256, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+        context->inputBlock = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+        context->outputBlock = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
 
-        context->arithEncoder = (struct ArithCtx*) align_alloc( 256, sizeof(struct ArithCtx) );
+        context->io = (struct BitIOCtx*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct BitIOCtx) );
 
         if (context->bytehashcount == nullptr || context->bytehash == nullptr ||
             context->ringbuffer == nullptr || context->refhash == nullptr || context->refhashcount == nullptr ||
             context->dict == nullptr || context->reverse_dictionnary == nullptr ||
             context->tmp_tables == nullptr || context->tmp_tables[0] == nullptr ||
             context->proba_tables == nullptr || context->proba_tables[0] == nullptr || context->inputBlock == nullptr ||
-            context->outputBlock == nullptr || context->arithEncoder == nullptr)
+            context->outputBlock == nullptr || context->io == nullptr)
         {
             lzaaheDeallocate( context );
             context = nullptr;

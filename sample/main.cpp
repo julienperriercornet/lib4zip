@@ -24,7 +24,6 @@ void compress( FILE* in, FILE* out )
             ctx->inputSize = to_read;
             lzaaheInit( ctx );
             lzaaheEncode( ctx );
-            printf( "%d -> %d\n", ctx->inputSize, ctx->outputSize );
             fputc(ctx->outputSize & 0xFF, out);
             fputc(((ctx->outputSize >> 8) & 0xFF), out);
             fputc(((ctx->outputSize >> 16) & 0xFF), out);
@@ -55,8 +54,7 @@ void decompress( FILE* in, FILE* out )
         {
             ctx->inputSize = to_read;
             lzaaheInit( ctx );
-            lzaaheDecode( ctx );
-            printf( "%d -> %d\n", to_read, ctx->outputSize );
+            //lzaaheDecode( ctx );
             fwrite( ctx->outputBlock, 1, ctx->outputSize, out );
 
             to_read = fgetc(in);

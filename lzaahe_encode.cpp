@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <time.h>
-#include <unordered_map>
 
 
 
@@ -23,10 +22,7 @@ static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t secon
 
 static inline void writebits( struct LZAAHEContext* ctx, uint32_t d, uint32_t bits )
 {
-    for (uint32_t i=0; i<bits; i++)
-    {
-        arith_encodebit( ctx->arithEncoder, (1<<(ARITH_PRECISION-1)), (d&(1<<i))>>i);
-    }
+    bitio_write( ctx->io, bits, d);
 }
 
 
@@ -106,7 +102,7 @@ extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
 
     ctx->outputSize = 3;
 
-    arith_init( ctx->arithEncoder, ctx->outputBlock+3, LZAAHE_OUTPUT_SZ-3 );
+    bitio_init( ctx->io, ctx->outputBlock+3, LZAAHE_OUTPUT_SZ-3 );
 
     for (uint32_t i=0; i<256; i++)
         ctx->dict[i] = (1 << 8) | i;
@@ -136,8 +132,8 @@ extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
         {
             bool islen4 = hitlen-4 == 0;
 
-            arith_encodebit( ctx->arithEncoder, (1<<(ARITH_PRECISION-1)), 1);
-            arith_encodebit( ctx->arithEncoder, (1<<(ARITH_PRECISION-1)), islen4);
+            bitio_write( ctx->io, 1);
+            bitio_write( ctx->io, islen4);
 
             if (!islen4)
             {
@@ -154,33 +150,11 @@ extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
         {
             uint8_t sym = ctx->inputBlock[i];
 
-            arith_encodebit( ctx->arithEncoder, (1<<(ARITH_PRECISION-1)), 0);
+            bitio_write( ctx->io, 0);
 
-            if ((n_huffsyms != 0) && (n_huffsyms & 0xFF) == 0)
+            for (uint32_t j=0; j<8; j++)
             {
-                lzaahe_bufferStats( ctx->dict, ctx->reverse_dictionnary, ctx->proba_tables, ctx->tmp_tables );
-                hufftables = true;
-            }
-
-            if (hufftables)
-            {
-                uint8_t current = ctx->reverse_dictionnary[sym];
-
-                for (uint32_t j=0; j<8; j++)
-                {
-                    arith_encodebit( ctx->arithEncoder, ctx->proba_tables[j][current&((1<<j)-1)], (current&(1<<j))>>j);
-                }
-
-                ctx->dict[current] += 256;
-            }
-            else
-            {
-                for (uint32_t j=0; j<8; j++)
-                {
-                    arith_encodebit( ctx->arithEncoder, (1<<(ARITH_PRECISION-1)), (sym&(1<<j))>>j);
-                }
-
-                ctx->dict[sym] += 256;
+                bitio_write( ctx->io, (sym&(1<<j))>>j);
             }
 
             n_huffsyms++;
@@ -189,7 +163,8 @@ extern "C" void lzaaheEncode( struct LZAAHEContext* ctx )
         i += hitlen;
     }
 
-    arith_finalize( ctx->arithEncoder );
+    bitio_finalize( ctx->io );
 
-    ctx->outputSize += arith_getoutptr( ctx->arithEncoder );
+    ctx->outputSize += bitio_getoutptr( ctx->io );
 }
+

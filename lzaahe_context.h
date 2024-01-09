@@ -2,7 +2,7 @@
 
 
 #include "lib4zip.h"
-#include "arith.h"
+#include "bitio.h"
 #include "platform.h"
 
 
