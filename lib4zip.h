@@ -7,13 +7,14 @@
 struct BitIOCtx;
 
 
-#define LZAAHE_BLOCK_SZ (1<<19)
-#define LZAAHE_OUTPUT_SZ ((1<<19) + (1<<17))
+#define LZAAHE_BLOCK_SZ (1<<22)
+#define LZAAHE_OUTPUT_SZ ((1<<22) + (1<<20))
 
 
 enum LZAAHEDictEnum {
     LZAAHEDictOne = 0,
-    LZAAHEDictTwo
+    LZAAHEDictTwo,
+    LZAAHEDictTwoL1L2
 };
 
 
@@ -36,11 +37,31 @@ struct LZAAHEContext {
         uint32_t sym;
         uint32_t longest1;
         uint32_t longest2;
-        uint32_t hid;
+        uint32_t hit_id_4;
+        uint16_t hit_id_4_c1, hit_id_4_c2;
+        uint32_t hit_id;
+        uint16_t hit_id_c1, hit_id_c2;
     };
-    uint32_t *bytehashcount;
-    uint32_t *bytehash;
-    uint32_t *ringbuffer;
+    struct RefCnt {
+        uint32_t len4_id_cnt;
+        uint32_t len4_c1_cnt;
+        uint32_t len4_c2_cnt;
+        uint32_t any_id_cnt;
+        uint32_t any_c1_cnt;
+        uint32_t any_c2_cnt;
+        uint32_t len4_id_bits;
+        uint32_t len4_id_mask;
+        uint32_t len4_c1_bits;
+        uint32_t len4_c1_mask;
+        uint32_t len4_c2_bits;
+        uint32_t len4_c2_mask;
+        uint32_t any_id_bits;
+        uint32_t any_id_mask;
+        uint32_t any_c1_bits;
+        uint32_t any_c1_mask;
+        uint32_t any_c2_bits;
+        uint32_t any_c2_mask;
+    } refcount;
     struct SymRef *refhash;
     uint8_t *refhashcount;
     // Huff

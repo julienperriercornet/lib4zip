@@ -18,15 +18,21 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 1:
         case 2:
         case 3:
+            options.lzMethod = LZAAHEDictOne;
+            options.huffMethod = LZAAHEDynamicHuff;
+            break;
         case 4:
         case 5:
         case 6:
+        default:
+            options.lzMethod = LZAAHEDictTwo;
+            options.huffMethod = LZAAHEDynamicHuff;
+            break;
         case 7:
         case 8:
         case 9:
         case 10:
-        default:
-            options.lzMethod = LZAAHEDictTwo;
+            options.lzMethod = LZAAHEDictTwoL1L2;
             options.huffMethod = LZAAHEDynamicHuff;
             break;
     }
@@ -37,9 +43,6 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
 
 extern "C" void lzaaheDeallocate( struct LZAAHEContext* ctx )
 {
-    if (ctx->bytehashcount != nullptr) align_free(ctx->bytehashcount);
-    if (ctx->bytehash != nullptr) align_free(ctx->bytehash);
-    if (ctx->ringbuffer != nullptr) align_free(ctx->ringbuffer);
     if (ctx->refhash != nullptr) align_free(ctx->refhash);
     if (ctx->refhashcount != nullptr) align_free(ctx->refhashcount);
     if (ctx->dict != nullptr) align_free(ctx->dict);
@@ -61,9 +64,6 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 
     if (context)
     {
-        context->bytehashcount = nullptr;
-        context->bytehash = nullptr;
-        context->ringbuffer = nullptr;
         context->refhash = nullptr;
         context->refhashcount = nullptr;
         context->dict = nullptr;
@@ -76,9 +76,6 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 
         context->options = getLZAAHEOptions( compressionLevel );
 
-        context->bytehashcount = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
-        context->bytehash = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_BYTEHASH_SZ*sizeof(uint32_t) );
-        context->ringbuffer = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_RINGBUFFER_SZ*sizeof(uint32_t) );
         context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHEContext::SymRef) );
         context->refhashcount = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
         context->dict = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
@@ -113,8 +110,7 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 
         context->io = (struct BitIOCtx*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct BitIOCtx) );
 
-        if (context->bytehashcount == nullptr || context->bytehash == nullptr ||
-            context->ringbuffer == nullptr || context->refhash == nullptr || context->refhashcount == nullptr ||
+        if (context->refhash == nullptr || context->refhashcount == nullptr ||
             context->dict == nullptr || context->reverse_dictionnary == nullptr ||
             context->tmp_tables == nullptr || context->tmp_tables[0] == nullptr ||
             context->proba_tables == nullptr || context->proba_tables[0] == nullptr || context->inputBlock == nullptr ||
@@ -131,6 +127,25 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 
 extern "C" void lzaaheInit(struct LZAAHEContext* ctx)
 {
-    memset( ctx->bytehashcount, 0, 256*sizeof(uint32_t) );
     memset( ctx->refhashcount, 0, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
+
+    ctx->refcount.len4_id_cnt = 0;
+    ctx->refcount.len4_c1_cnt = 0;
+    ctx->refcount.len4_c2_cnt = 0;
+    ctx->refcount.any_id_cnt = 0;
+    ctx->refcount.any_c1_cnt = 0;
+    ctx->refcount.any_c2_cnt = 0;
+    ctx->refcount.len4_id_bits = 1;
+    ctx->refcount.len4_id_mask = 1;
+    ctx->refcount.len4_c1_bits = 8;
+    ctx->refcount.len4_c1_mask = 1;
+    ctx->refcount.len4_c2_bits = 12;
+    ctx->refcount.len4_c2_mask = 1;
+    ctx->refcount.any_id_bits = 1;
+    ctx->refcount.any_id_mask = 1;
+    ctx->refcount.any_c1_bits = 8;
+    ctx->refcount.any_c1_mask = 1;
+    ctx->refcount.any_c2_bits = 12;
+    ctx->refcount.any_c2_mask = 1;
 }
+
