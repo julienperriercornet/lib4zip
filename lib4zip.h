@@ -13,8 +13,7 @@ struct BitIOCtx;
 
 enum LZAAHEDictEnum {
     LZAAHEDictOne = 0,
-    LZAAHEDictTwo,
-    LZAAHEDictTwoL1L2
+    LZAAHEDictTwo
 };
 
 
@@ -37,31 +36,8 @@ struct LZAAHEContext {
         uint32_t sym;
         uint32_t longest1;
         uint32_t longest2;
-        uint32_t hit_id_4;
-        uint16_t hit_id_4_c1, hit_id_4_c2;
         uint32_t hit_id;
-        uint16_t hit_id_c1, hit_id_c2;
     };
-    struct RefCnt {
-        uint32_t len4_id_cnt;
-        uint32_t len4_c1_cnt;
-        uint32_t len4_c2_cnt;
-        uint32_t any_id_cnt;
-        uint32_t any_c1_cnt;
-        uint32_t any_c2_cnt;
-        uint32_t len4_id_bits;
-        uint32_t len4_id_mask;
-        uint32_t len4_c1_bits;
-        uint32_t len4_c1_mask;
-        uint32_t len4_c2_bits;
-        uint32_t len4_c2_mask;
-        uint32_t any_id_bits;
-        uint32_t any_id_mask;
-        uint32_t any_c1_bits;
-        uint32_t any_c1_mask;
-        uint32_t any_c2_bits;
-        uint32_t any_c2_mask;
-    } refcount;
     struct SymRef *refhash;
     uint8_t *refhashcount;
     // Huff
@@ -75,6 +51,11 @@ struct LZAAHEContext {
     uint32_t outputSize;
     uint32_t inputSize;
     struct BitIOCtx *io;
+    struct RefCnt {
+        uint32_t id_cnt;
+        uint32_t id_bits;
+        uint32_t id_mask;
+    } refcount;
     struct LZAAHEOptions options;
 };
 #pragma pack()

@@ -24,15 +24,12 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 4:
         case 5:
         case 6:
-        default:
-            options.lzMethod = LZAAHEDictTwo;
-            options.huffMethod = LZAAHEDynamicHuff;
-            break;
         case 7:
         case 8:
         case 9:
         case 10:
-            options.lzMethod = LZAAHEDictTwoL1L2;
+        default:
+            options.lzMethod = LZAAHEDictTwo;
             options.huffMethod = LZAAHEDynamicHuff;
             break;
     }
@@ -129,23 +126,8 @@ extern "C" void lzaaheInit(struct LZAAHEContext* ctx)
 {
     memset( ctx->refhashcount, 0, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
 
-    ctx->refcount.len4_id_cnt = 0;
-    ctx->refcount.len4_c1_cnt = 0;
-    ctx->refcount.len4_c2_cnt = 0;
-    ctx->refcount.any_id_cnt = 0;
-    ctx->refcount.any_c1_cnt = 0;
-    ctx->refcount.any_c2_cnt = 0;
-    ctx->refcount.len4_id_bits = 1;
-    ctx->refcount.len4_id_mask = 1;
-    ctx->refcount.len4_c1_bits = 8;
-    ctx->refcount.len4_c1_mask = 1;
-    ctx->refcount.len4_c2_bits = 12;
-    ctx->refcount.len4_c2_mask = 1;
-    ctx->refcount.any_id_bits = 1;
-    ctx->refcount.any_id_mask = 1;
-    ctx->refcount.any_c1_bits = 8;
-    ctx->refcount.any_c1_mask = 1;
-    ctx->refcount.any_c2_bits = 12;
-    ctx->refcount.any_c2_mask = 1;
+    ctx->refcount.id_cnt = 0;
+    ctx->refcount.id_bits = 1;
+    ctx->refcount.id_mask = 1;
 }
 

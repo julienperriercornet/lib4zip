@@ -8,7 +8,7 @@
 
 void compress( FILE* in, FILE* out )
 {
-    struct LZAAHEContext* ctx = lzaaheAllocate( 1 );
+    struct LZAAHEContext* ctx = lzaaheAllocate( 5 );
 
     if (ctx)
     {
@@ -39,7 +39,7 @@ void compress( FILE* in, FILE* out )
 
 void decompress( FILE* in, FILE* out )
 {
-    struct LZAAHEContext* ctx = lzaaheAllocate( 1 );
+    struct LZAAHEContext* ctx = lzaaheAllocate( 5 );
 
     if (ctx)
     {
