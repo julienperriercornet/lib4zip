@@ -177,5 +177,6 @@ static uint32_t lzaahe_potHigher( uint32_t n )
 
 static inline uint32_t lzaahe_getHash( uint32_t h )
 {
-    return (((h & 0xFFC00000) >> (32-LZAAHE_REFHASH_BITS)) ^ (h & (LZAAHE_REFHASH_SZ-1)));
+    return (((h & (0xFFFFFFFF - (LZAAHE_REFHASH_SZ - 1))) >> (32-LZAAHE_REFHASH_BITS)) ^ (h & (LZAAHE_REFHASH_SZ - 1)));
+    //return (h * 429496723) & (LZAAHE_REFHASH_SZ - 1);
 }

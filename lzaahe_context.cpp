@@ -18,9 +18,6 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 1:
         case 2:
         case 3:
-            options.lzMethod = LZAAHEDictOne;
-            options.huffMethod = LZAAHEDynamicHuff;
-            break;
         case 4:
         case 5:
         case 6:
@@ -29,7 +26,7 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
         case 9:
         case 10:
         default:
-            options.lzMethod = LZAAHEDictTwo;
+            options.lzMethod = LZAAHEDictOne;
             options.huffMethod = LZAAHEDynamicHuff;
             break;
     }
@@ -38,7 +35,7 @@ static struct LZAAHEOptions getLZAAHEOptions( uint32_t compressionLevel )
 }
 
 
-extern "C" void lzaaheDeallocate( struct LZAAHEContext* ctx )
+extern "C" void lzaaheDeallocateCompression( struct LZAAHECompressionContext* ctx )
 {
     if (ctx->refhash != nullptr) align_free(ctx->refhash);
     if (ctx->refhashcount != nullptr) align_free(ctx->refhashcount);
@@ -55,9 +52,9 @@ extern "C" void lzaaheDeallocate( struct LZAAHEContext* ctx )
 }
 
 
-extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
+extern "C" struct LZAAHECompressionContext* lzaaheAllocateCompression()
 {
-    struct LZAAHEContext* context = (struct LZAAHEContext*) align_alloc( 256, sizeof(struct LZAAHEContext) );
+    struct LZAAHECompressionContext* context = (struct LZAAHECompressionContext*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct LZAAHECompressionContext) );
 
     if (context)
     {
@@ -71,9 +68,9 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
         context->outputBlock = nullptr;
         context->io = nullptr;
 
-        context->options = getLZAAHEOptions( compressionLevel );
+        context->options = getLZAAHEOptions( 10 );
 
-        context->refhash = (struct LZAAHEContext::SymRef*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHEContext::SymRef) );
+        context->refhash = (struct LZAAHECompressionContext::SymRef*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*LZAAHE_REFHASH_ENTITIES*sizeof(struct LZAAHECompressionContext::SymRef) );
         context->refhashcount = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
         context->dict = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint32_t) );
         context->reverse_dictionnary = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, 256*sizeof(uint8_t) );
@@ -113,7 +110,7 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
             context->proba_tables == nullptr || context->proba_tables[0] == nullptr || context->inputBlock == nullptr ||
             context->outputBlock == nullptr || context->io == nullptr)
         {
-            lzaaheDeallocate( context );
+            lzaaheDeallocateCompression( context );
             context = nullptr;
         }
     }
@@ -122,12 +119,36 @@ extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel )
 }
 
 
-extern "C" void lzaaheInit(struct LZAAHEContext* ctx)
+extern "C" void lzaaheDeallocateDecompression( struct LZAAHEDecompressionContext* ctx )
 {
-    memset( ctx->refhashcount, 0, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
+    if (ctx->symlist != nullptr) align_free(ctx->symlist);
+    if (ctx->inputBlock != nullptr) align_free(ctx->inputBlock);
+    if (ctx->outputBlock != nullptr) align_free(ctx->outputBlock);
+    if (ctx->io != nullptr) align_free(ctx->io);
+    align_free( ctx );
+}
 
-    ctx->refcount.id_cnt = 0;
-    ctx->refcount.id_bits = 1;
-    ctx->refcount.id_mask = 1;
+
+extern "C" struct LZAAHEDecompressionContext* lzaaheAllocateDecompression()
+{
+    struct LZAAHEDecompressionContext* context = (struct LZAAHEDecompressionContext*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct LZAAHEDecompressionContext) );
+
+    if (context)
+    {
+        context->symlist = (struct LZAAHEDecompressionContext::Symbol*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_MAX_SYMBOLS*sizeof(struct LZAAHEDecompressionContext::Symbol) );
+
+        context->inputBlock = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+        context->outputBlock = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+
+        context->io = (struct BitIOCtx*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct BitIOCtx) );
+
+        if (context->symlist == nullptr || context->io == nullptr || context->inputBlock == nullptr ||  context->outputBlock == nullptr)
+        {
+            lzaaheDeallocateDecompression( context );
+            context = nullptr;
+        }
+    }
+
+    return context;
 }
 

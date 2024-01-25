@@ -5,10 +5,10 @@
 
 
 #include "../lzaahe_context.h"
-
 #define LZAAHE_SORT_STATS
 #define LZAAHE_SORT_DEBUG
 #include "../lzaahe_common.h"
+#include "../bitio.h"
 
 
 extern int test_arith32();
@@ -76,17 +76,57 @@ int test_lzaahe_sort()
 
 int test_lzaahe_context()
 {
-    LZAAHEContext* context = lzaaheAllocate( 10 );
+    LZAAHECompressionContext* context = lzaaheAllocateCompression();
 
     if (context != nullptr)
     {
-        lzaaheDeallocate(context);
+        lzaaheDeallocateCompression(context);
         return 0;
     }
     else
     {
         return 1;
     }
+}
+
+
+int test_lzaahe_bitio()
+{
+    int status = 0;
+
+    uint8_t *buffer = (uint8_t*) align_alloc( 256, 256*sizeof(uint8_t) );
+
+    struct BitIOCtx writectx;
+
+    bitio_init( &writectx, buffer, 256 );
+
+    bitio_write_bit( &writectx, 0 );
+    bitio_write_bit( &writectx, 1 );
+    bitio_write( &writectx, 6, 42 );
+    bitio_write( &writectx, 11, 1337 );
+    bitio_write( &writectx, 4, 13 );
+    bitio_write( &writectx, 15, 31337 );
+    bitio_write_bit( &writectx, 0 );
+
+    bitio_finalize( &writectx );
+
+    struct BitIOCtx readctx;
+
+    bitio_init( &readctx, buffer, 256 );
+
+    bitio_prefetch( &readctx );
+
+    if (bitio_read_bit( &readctx ) != 0) status |= 1;
+    if (bitio_read_bit( &readctx ) != 1) status |= 1;
+    if (bitio_read( &readctx, 6 ) != 42) status |= 1;
+    if (bitio_read( &readctx, 11 ) != 1337) status |= 1;
+    if (bitio_read( &readctx, 4 ) != 13) status |= 1;
+    if (bitio_read( &readctx, 15 ) != 31337) status |= 1;
+    if (bitio_read_bit( &readctx ) != 0) status |= 1;
+
+    align_free( buffer );
+
+    return status;
 }
 
 
@@ -104,6 +144,8 @@ int main( int argc, const char** argv )
         status = test_arith32();
     else if (strcmp(argv[1], "test_arith64") == 0)
         status = test_arith64();
+    else if (strcmp(argv[1], "test_bitio") == 0)
+        status = test_lzaahe_bitio();
 
     return status;
 }

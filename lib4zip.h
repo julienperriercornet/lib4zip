@@ -12,13 +12,18 @@ struct BitIOCtx;
 
 
 enum LZAAHEDictEnum {
-    LZAAHEDictOne = 0,
-    LZAAHEDictTwo
+    LZAAHEDictOne = 0
 };
 
 
 enum LZAAHEHuff {
     LZAAHEDynamicHuff = 0
+};
+
+
+enum LZAAHEContextType {
+    LZAAHECompress = 0,
+    LZAAHEDecompress
 };
 
 
@@ -30,12 +35,11 @@ struct LZAAHEOptions {
 };
 
 
-struct LZAAHEContext {
+struct LZAAHECompressionContext {
     // LZ
     struct SymRef {
         uint32_t sym;
-        uint32_t longest1;
-        uint32_t longest2;
+        uint32_t longest;
         uint32_t hit_id;
     };
     struct SymRef *refhash;
@@ -58,12 +62,28 @@ struct LZAAHEContext {
     } refcount;
     struct LZAAHEOptions options;
 };
+
+struct LZAAHEDecompressionContext {
+    struct Symbol {
+        uint32_t pos;
+        uint32_t len;
+    };
+    struct Symbol* symlist;
+    // I/O
+    uint8_t *inputBlock;
+    uint8_t *outputBlock;
+    uint32_t outputSize;
+    uint32_t inputSize;
+    struct BitIOCtx *io;
+};
 #pragma pack()
 
 
-extern "C" struct LZAAHEContext* lzaaheAllocate( uint32_t compressionLevel );
-extern "C" void lzaaheDeallocate(struct LZAAHEContext* ctx);
-extern "C" void lzaaheInit(struct LZAAHEContext* ctx);
-extern "C" void lzaaheEncode( struct LZAAHEContext* ctx );
-extern "C" void lzaaheDecode( struct LZAAHEContext* ctx );
+extern "C" struct LZAAHECompressionContext* lzaaheAllocateCompression();
+extern "C" void lzaaheDeallocateCompression(struct LZAAHECompressionContext* ctx);
+extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx );
+
+extern "C" struct LZAAHEDecompressionContext* lzaaheAllocateDecompression();
+extern "C" void lzaaheDeallocateDecompression(struct LZAAHEDecompressionContext* ctx);
+extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx );
 
