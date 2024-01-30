@@ -41,6 +41,8 @@ struct LZAAHECompressionContext {
         uint32_t sym;
         uint32_t longest;
         uint32_t hit_id;
+        uint16_t matchlen;
+        uint16_t n_occurences;
     };
     struct SymRef *refhash;
     uint8_t *refhashcount;
@@ -79,11 +81,19 @@ struct LZAAHEDecompressionContext {
 #pragma pack()
 
 
-extern "C" struct LZAAHECompressionContext* lzaaheAllocateCompression();
-extern "C" void lzaaheDeallocateCompression(struct LZAAHECompressionContext* ctx);
-extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx );
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
-extern "C" struct LZAAHEDecompressionContext* lzaaheAllocateDecompression();
-extern "C" void lzaaheDeallocateDecompression(struct LZAAHEDecompressionContext* ctx);
-extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx );
+    struct LZAAHECompressionContext* lzaaheAllocateCompression();
+    void lzaaheDeallocateCompression(struct LZAAHECompressionContext* ctx);
+    void lzaaheEncode( struct LZAAHECompressionContext* ctx );
+
+    struct LZAAHEDecompressionContext* lzaaheAllocateDecompression();
+    void lzaaheDeallocateDecompression(struct LZAAHEDecompressionContext* ctx);
+    void lzaaheDecode( struct LZAAHEDecompressionContext* ctx );
+
+#if defined (__cplusplus)
+}
+#endif
 

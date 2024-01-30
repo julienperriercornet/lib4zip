@@ -63,8 +63,7 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
             {
                 hitpos = readbits( ctx, i_bits );
 
-                for (uint32_t j=0; j<hitlen; j++)
-                    ctx->outputBlock[i+j] = ctx->outputBlock[hitpos+j];
+                lzaahe_memcpy_overrun( ctx->outputBlock+i, ctx->outputBlock+hitpos, hitlen );
 
                 ctx->symlist[id_cnt].pos = hitpos;
                 ctx->symlist[id_cnt].len = hitlen;
@@ -80,11 +79,9 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
             else
             {
                 hitid = readbits( ctx, id_bits );
-
                 hitpos = ctx->symlist[hitid].pos;
 
-                for (uint32_t j=0; j<hitlen; j++)
-                    ctx->outputBlock[i+j] = ctx->outputBlock[hitpos+j];
+                lzaahe_memcpy_overrun( ctx->outputBlock+i, ctx->outputBlock+hitpos, hitlen );
 
                 if (hitlen > ctx->symlist[hitid].len)
                 {

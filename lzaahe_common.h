@@ -175,8 +175,17 @@ static uint32_t lzaahe_potHigher( uint32_t n )
 }
 
 
-static inline uint32_t lzaahe_getHash( uint32_t h )
+
+#define lzaahe_memcpy8( A, B ) *((uint64_t*) A) = *((const uint64_t*) B)
+
+
+// Voluntarly overrun the destination buffer by up to 7 bytes
+static inline void lzaahe_memcpy_overrun( void* dst, const void* src, uint64_t size )
 {
-    return (((h & (0xFFFFFFFF - (LZAAHE_REFHASH_SZ - 1))) >> (32-LZAAHE_REFHASH_BITS)) ^ (h & (LZAAHE_REFHASH_SZ - 1)));
-    //return (h * 429496723) & (LZAAHE_REFHASH_SZ - 1);
+    uint8_t* d = (uint8_t*) dst;
+    const uint8_t* s = (const uint8_t*) src;
+    uint8_t* const e = ((uint8_t*) dst) + size;
+
+    do { lzaahe_memcpy8(d,s); d+=8; s+=8; } while (d<e);
 }
+
