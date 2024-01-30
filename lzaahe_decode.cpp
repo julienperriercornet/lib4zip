@@ -16,15 +16,15 @@ static inline uint32_t readbits( struct LZAAHEDecompressionContext* ctx, uint32_
 }
 
 
-extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
+extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize )
 {
     uint32_t size = 0;
 
-    size = ctx->inputBlock[0];
-    size |= ctx->inputBlock[1] << 8;
-    size |= ctx->inputBlock[2] << 16;
+    size = inputBlock[0];
+    size |= inputBlock[1] << 8;
+    size |= inputBlock[2] << 16;
 
-    bitio_init( ctx->io, ctx->inputBlock+3, ctx->inputSize-3 );
+    bitio_init( ctx->io, inputBlock+3, inputSize-3 );
 
     bitio_prefetch( ctx->io );
 
@@ -63,7 +63,7 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
             {
                 hitpos = readbits( ctx, i_bits );
 
-                lzaahe_memcpy_overrun( ctx->outputBlock+i, ctx->outputBlock+hitpos, hitlen );
+                lzaahe_memcpy_overrun( outputBlock+i, outputBlock+hitpos, hitlen );
 
                 ctx->symlist[id_cnt].pos = hitpos;
                 ctx->symlist[id_cnt].len = hitlen;
@@ -81,7 +81,7 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
                 hitid = readbits( ctx, id_bits );
                 hitpos = ctx->symlist[hitid].pos;
 
-                lzaahe_memcpy_overrun( ctx->outputBlock+i, ctx->outputBlock+hitpos, hitlen );
+                lzaahe_memcpy_overrun( outputBlock+i, outputBlock+hitpos, hitlen );
 
                 if (hitlen > ctx->symlist[hitid].len)
                 {
@@ -92,7 +92,7 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
         }
         else
         {
-            ctx->outputBlock[i] = readbits( ctx, 8 );
+            outputBlock[i] = readbits( ctx, 8 );
         }
 
         if ((i != 0) && ((i+hitlen) > i_mask))
@@ -104,6 +104,6 @@ extern "C" void lzaaheDecode( struct LZAAHEDecompressionContext* ctx )
         i += hitlen;
     }
 
-    ctx->outputSize = size;
+    *outputSize = size;
 }
 

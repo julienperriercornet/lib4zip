@@ -4,64 +4,78 @@
 
 
 #include "../lib4zip.h"
+#include "../platform.h"
 
 
 void compress( FILE* in, FILE* out )
 {
+    uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_BLOCK_SZ*sizeof(uint8_t) );
+    uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+
     struct LZAAHECompressionContext* ctx = lzaaheAllocateCompression();
 
     if (ctx)
     {
-
         fseek( in, 0, SEEK_END );
         size_t remainsz = ftell( in );
         fseek( in, 0, SEEK_SET );
 
         size_t to_read = remainsz > LZAAHE_BLOCK_SZ ? LZAAHE_BLOCK_SZ : remainsz;
 
-        while ( to_read > 0 && to_read == fread( ctx->inputBlock, 1, to_read, in ) )
+        while ( to_read > 0 && to_read == fread( inbuff, 1, to_read, in ) )
         {
-            ctx->inputSize = to_read;
-            lzaaheEncode( ctx );
-            fputc(ctx->outputSize & 0xFF, out);
-            fputc(((ctx->outputSize >> 8) & 0xFF), out);
-            fputc(((ctx->outputSize >> 16) & 0xFF), out);
-            fwrite( ctx->outputBlock, 1, ctx->outputSize, out );
+            uint32_t outputSize;
+
+            lzaaheEncode( ctx, inbuff, outbuff, &outputSize, to_read );
+
+            fputc(outputSize & 0xFF, out);
+            fputc(((outputSize >> 8) & 0xFF), out);
+            fputc(((outputSize >> 16) & 0xFF), out);
+            fwrite( outbuff, 1, outputSize, out );
             remainsz -= to_read;
             to_read = remainsz > LZAAHE_BLOCK_SZ ? LZAAHE_BLOCK_SZ : remainsz;
         }
 
-        lzaaheDeallocateCompression(ctx);
     }
+
+    if (ctx) lzaaheDeallocateCompression(ctx);
+
+    if (outbuff != nullptr) align_free(outbuff);
+    if (inbuff != nullptr) align_free(inbuff);
 }
 
 
 void decompress( FILE* in, FILE* out )
 {
+    uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_OUTPUT_SZ*sizeof(uint8_t) );
+    uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, LZAAHE_BLOCK_SZ*sizeof(uint8_t) );
+
     struct LZAAHEDecompressionContext* ctx = lzaaheAllocateDecompression();
 
     if (ctx)
     {
-
-        uint32_t to_read = fgetc(in);
-        to_read += fgetc(in) << 8;
-        to_read += fgetc(in) << 16;
-
-        while ( !feof(in) && to_read > 0 &&
-            to_read < LZAAHE_OUTPUT_SZ &&
-            to_read == fread( ctx->inputBlock, 1, to_read, in ) )
+        do
         {
-            ctx->inputSize = to_read;
-            lzaaheDecode( ctx );
-            fwrite( ctx->outputBlock, 1, ctx->outputSize, out );
-
-            to_read = fgetc(in);
+            uint32_t to_read = fgetc(in);
             to_read += fgetc(in) << 8;
             to_read += fgetc(in) << 16;
-        }
 
-        lzaaheDeallocateDecompression(ctx);
+            if (to_read > 0 && to_read < LZAAHE_OUTPUT_SZ && to_read == fread( inbuff, 1, to_read, in ))
+            {
+                uint32_t outputSize;
+
+                lzaaheDecode( ctx, inbuff, outbuff, &outputSize, to_read );
+
+                fwrite( outbuff, 1, outputSize, out );
+            }
+        }
+        while ( !feof(in) ) ;
     }
+
+    if (ctx) lzaaheDeallocateDecompression(ctx);
+
+    if (outbuff != nullptr) align_free(outbuff);
+    if (inbuff != nullptr) align_free(inbuff);
 }
 
 

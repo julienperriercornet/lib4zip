@@ -21,15 +21,13 @@ static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t secon
 
     if (maxmatchstrlen >= 4)
     {
-        uint32_t i = 0;
-        uint8_t *strfirst = inbuff+first+4;
-        uint8_t *strstart = inbuff+first;
-        uint8_t *strsecond = inbuff+second+4;
-        uint8_t *strend = inbuff+first+maxmatchstrlen;
+        uint32_t i = 4;
+        uint8_t *strfirst = inbuff+first;
+        uint8_t *strsecond = inbuff+second;
 
-        while ((strfirst+i != strend) && (strfirst[i] == strsecond[i])) i++;
+        while ((i != maxmatchstrlen) && (strfirst[i] == strsecond[i])) i++;
 
-        return (uint32_t) (strfirst-strstart);
+        return i-1;
     }
     else
         return 1;
@@ -140,18 +138,18 @@ static void analyzeResults( struct LZAAHECompressionContext* ctx )
 }
 
 
-extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx )
+extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize )
 {
-    uint32_t size = ctx->inputSize;
+    const uint32_t size = inputSize;
 
     // First write the uncompressed size
-    ctx->outputBlock[0] = (size & 0xFF);
-    ctx->outputBlock[1] = ((size >> 8) & 0xFF);
-    ctx->outputBlock[2] = ((size >> 16) & 0xFF);
+    outputBlock[0] = (size & 0xFF);
+    outputBlock[1] = ((size >> 8) & 0xFF);
+    outputBlock[2] = ((size >> 16) & 0xFF);
 
-    ctx->outputSize = 3;
+    *outputSize = 3;
 
-    bitio_init( ctx->io, ctx->outputBlock+3, LZAAHE_OUTPUT_SZ-3 );
+    bitio_init( ctx->io, outputBlock+3, LZAAHE_OUTPUT_SZ-3 );
     init( ctx );
 
     uint32_t i = 0;
@@ -172,12 +170,12 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx )
 
         if (i < size-3)
         {
-            uint32_t str4 = *((uint32_t*) (ctx->inputBlock+i));
+            uint32_t str4 = *((uint32_t*) (inputBlock+i));
 
-            addhit = addHit(ctx->inputBlock, size, ctx->refhash, ctx->refhashcount, getHash(str4), str4, i, hitlen, hitidx, hitpos);
+            addhit = addHit(inputBlock, size, ctx->refhash, ctx->refhashcount, getHash(str4), str4, i, hitlen, hitidx, hitpos);
         }
 
-        if (addhit /*&& hitidx != -1*/ && !((ctx->refhash[hitidx].hit_id == -1) && (ctx->refcount.id_cnt >= LZAAHE_MAX_SYMBOLS)))
+        if (addhit && !((ctx->refhash[hitidx].hit_id == -1) && (ctx->refcount.id_cnt >= LZAAHE_MAX_SYMBOLS)))
         {
             bitio_write_bit( ctx->io, 1 );
             bitio_write_bit( ctx->io, hitlen == 4 );
@@ -213,10 +211,8 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx )
         }
         else
         {
-            uint8_t sym = ctx->inputBlock[i];
-
             bitio_write_bit( ctx->io, 0 );
-            writebits( ctx, sym, 8 );
+            writebits( ctx, inputBlock[i], 8 );
         }
 
         if ((i != 0) && ((i+hitlen) > i_mask))
@@ -232,6 +228,6 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx )
 
     //analyzeResults(ctx);
 
-    ctx->outputSize += bitio_getoutptr( ctx->io );
+    *outputSize += bitio_getoutptr( ctx->io );
 }
 

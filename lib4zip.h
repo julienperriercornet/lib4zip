@@ -7,8 +7,9 @@
 struct BitIOCtx;
 
 
-#define LZAAHE_BLOCK_SZ (1<<22)
-#define LZAAHE_OUTPUT_SZ ((1<<22) + (1<<20))
+#define LZAAHE_BLOCK_BITS (22)
+#define LZAAHE_BLOCK_SZ (1<<LZAAHE_BLOCK_BITS)
+#define LZAAHE_OUTPUT_SZ ((1<<LZAAHE_BLOCK_BITS) + (1<<LZAAHE_BLOCK_BITS-2))
 
 
 enum LZAAHEDictEnum {
@@ -17,13 +18,8 @@ enum LZAAHEDictEnum {
 
 
 enum LZAAHEHuff {
-    LZAAHEDynamicHuff = 0
-};
-
-
-enum LZAAHEContextType {
-    LZAAHECompress = 0,
-    LZAAHEDecompress
+    LZAAHENoHuff = 0,
+    LZAAHEDynamicHuff
 };
 
 
@@ -46,16 +42,6 @@ struct LZAAHECompressionContext {
     };
     struct SymRef *refhash;
     uint8_t *refhashcount;
-    // Huff
-    uint32_t *dict;
-    uint8_t *reverse_dictionnary;
-    uint32_t **proba_tables;
-    uint32_t **tmp_tables;
-    // I/O
-    uint8_t *inputBlock;
-    uint8_t *outputBlock;
-    uint32_t outputSize;
-    uint32_t inputSize;
     struct BitIOCtx *io;
     struct RefCnt {
         uint32_t id_cnt;
@@ -71,11 +57,6 @@ struct LZAAHEDecompressionContext {
         uint32_t len;
     };
     struct Symbol* symlist;
-    // I/O
-    uint8_t *inputBlock;
-    uint8_t *outputBlock;
-    uint32_t outputSize;
-    uint32_t inputSize;
     struct BitIOCtx *io;
 };
 #pragma pack()
@@ -87,11 +68,11 @@ extern "C" {
 
     struct LZAAHECompressionContext* lzaaheAllocateCompression();
     void lzaaheDeallocateCompression(struct LZAAHECompressionContext* ctx);
-    void lzaaheEncode( struct LZAAHECompressionContext* ctx );
+    void lzaaheEncode( struct LZAAHECompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize );
 
     struct LZAAHEDecompressionContext* lzaaheAllocateDecompression();
     void lzaaheDeallocateDecompression(struct LZAAHEDecompressionContext* ctx);
-    void lzaaheDecode( struct LZAAHEDecompressionContext* ctx );
+    void lzaaheDecode( struct LZAAHEDecompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize );
 
 #if defined (__cplusplus)
 }
