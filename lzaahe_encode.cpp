@@ -1,10 +1,26 @@
+/*
+** Lib4zip lzaahe encoder implementation.
+** Copyright (C) 2022-2024 Julien Perrier-cornet
+**
+** This program is free software: you can redistribute it and/or modify
+** it under the terms of the GNU General Public License as published by
+** the Free Software Foundation, either version 3 of the License, or
+** (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
 #include <time.h>
-#include <vector>
-#include <algorithm>
 
 
 
@@ -15,7 +31,8 @@
 
 static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t second, uint32_t decoded_size, uint32_t size )
 {
-    uint32_t maxmatchstrlen = (first+maxmatchstrlen < decoded_size) ? 136 : decoded_size-first;
+    uint32_t maxmatchstrlen = 127+4+1;
+    maxmatchstrlen = (first+maxmatchstrlen < decoded_size) ? maxmatchstrlen : decoded_size-first;
     maxmatchstrlen = (second+maxmatchstrlen) < size ? maxmatchstrlen : size - second;
     maxmatchstrlen = (second-first) < maxmatchstrlen ? second-first : maxmatchstrlen;
 
@@ -34,19 +51,13 @@ static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t secon
 }
 
 
-static inline void writebits( struct LZAAHECompressionContext* ctx, uint32_t d, uint32_t bits )
-{
-    bitio_write( ctx->io, bits, d);
-}
-
-
 static void init(struct LZAAHECompressionContext* ctx)
 {
     memset( ctx->refhashcount, 0, LZAAHE_REFHASH_SZ*sizeof(uint8_t) );
 
-    ctx->refcount.id_cnt = 0;
-    ctx->refcount.id_bits = 1;
-    ctx->refcount.id_mask = 1;
+    ctx->id = 0;
+    ctx->id_bits = 1;
+    ctx->id_mask = 1;
 }
 
 
@@ -56,48 +67,67 @@ static inline uint32_t getHash( uint32_t h )
 }
 
 
-static inline bool addHit(uint8_t *inbuff, uint32_t size, struct LZAAHECompressionContext::SymRef *refhash, uint8_t *refhashcount, uint32_t hash, uint32_t str4, uint32_t pos, uint32_t &matchlength, uint32_t &hitidx, uint32_t &hitpos)
+static inline bool addHit( struct LZAAHECompressionContext *context, uint8_t *input, uint32_t i, uint32_t size, uint32_t &hitlength, uint32_t &hitid, uint32_t &hitpos)
 {
-    uint32_t i = 0;
+    hitid = -1;
 
-    while (i < refhashcount[hash] && refhash[hash*LZAAHE_REFHASH_ENTITIES+i].sym != str4) i++;
-
-    if (i < refhashcount[hash])
+    if (i < size-3)
     {
-        // Hit sym
-        hitidx = hash*LZAAHE_REFHASH_ENTITIES+i;
-        hitpos = refhash[hitidx].longest;
+        uint32_t str4 = *((uint32_t*) (input+i));
+        uint32_t hash = getHash(str4);
+        uint32_t hitidx = hash*LZAAHE_REFHASH_ENTITIES;
+        uint32_t j = 0;
 
-        refhash[hitidx].n_occurences++;
+        while (j < context->refhashcount[hash] && context->refhash[hitidx+j].sym != str4) j++;
 
-        matchlength = matchlen( inbuff, hitpos, pos, pos, size );
-
-        if (matchlength >= 4)
+        if (j < context->refhashcount[hash])
         {
-            if (matchlength > refhash[hitidx].matchlen)
-            {
-                refhash[hitidx].longest = hitpos;
-                refhash[hitidx].matchlen = matchlength;
-            }
+            // Hit sym
+            uint32_t matchlength = matchlen( input, context->refhash[hitidx+j].pos, i, i, size );
 
-            return true;
+            if (matchlength >= 4)
+            {
+                context->refhash[hitidx+j].n_occurences++;
+
+                if (context->refhash[hitidx+j].n_occurences == 2)
+                {
+                    // new ID
+                    hitpos = context->refhash[hitidx+j].pos;
+
+                    context->refhash[hitidx+j].hit_id = context->id++;
+
+                    if (context->id > context->id_mask)
+                    {
+                        context->id_bits++;
+                        context->id_mask = (1 << context->id_bits) - 1;
+                    }
+                }
+                else
+                    hitid = context->refhash[hitidx+j].hit_id;
+
+                hitlength = matchlength;
+
+                if (matchlength > context->refhash[hitidx+j].matchlen)
+                {
+                    context->refhash[hitidx+j].pos = i;
+                    context->refhash[hitidx+j].matchlen = matchlength;
+                }
+
+                return true;
+            }
+        }
+        else if (j < LZAAHE_REFHASH_ENTITIES)
+        {
+            // New sym
+            context->refhash[hitidx+j].sym = str4;
+            context->refhash[hitidx+j].pos = i;
+            context->refhash[hitidx+j].hit_id = -1;
+            context->refhash[hitidx+j].matchlen = 0;
+            context->refhash[hitidx+j].n_occurences = 1;
+
+            context->refhashcount[hash]++;
         }
     }
-    else if (i >= refhashcount[hash] && i < LZAAHE_REFHASH_ENTITIES)
-    {
-        // New sym
-        hitidx = hash*LZAAHE_REFHASH_ENTITIES+i;
-
-        refhash[hitidx].sym = str4;
-        refhash[hitidx].longest = pos;
-        refhash[hitidx].hit_id = -1;
-        refhash[hitidx].matchlen = 0;
-        refhash[hitidx].n_occurences = 1;
-
-        refhashcount[hash]++;
-    }
-
-    matchlength = 1;
 
     return false;
 }
@@ -149,85 +179,151 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx, uint8_t *inp
 
     *outputSize = 3;
 
-    bitio_init( ctx->io, outputBlock+3, LZAAHE_OUTPUT_SZ-3 );
     init( ctx );
 
     uint32_t i = 0;
     uint32_t i_mask = 1;
     uint32_t i_bits = 1;
     uint32_t n_matches = 0;
-    uint32_t n_symbols = 0;
+    uint32_t n_matches4 = 0;
     uint32_t n_matchlen = 0;
+
+    uint32_t uncompressed_i = 0;
+    uint32_t hit_i = 0;
+    uint64_t hit_buff;
+    uint32_t hit_bits = 0;
+    uint32_t lz_i = 0;
+    uint64_t lz_buff;
+    uint32_t lz_bits = 0;
 
     while (i < size)
     {
-        // lz string match search
-        uint32_t hitlen = 1;
-        uint32_t hitidx = -1;
-        uint32_t hitpos = -1;
+        uint32_t j = 0;
+        uint32_t hitlen, hitpos, hitid;
 
-        bool addhit = false;
+        bool hit = addHit( ctx, inputBlock, i, size, hitlen, hitpos, hitid );
 
-        if (i < size-3)
+        hit_buff = (hit_buff << 1) | hit;
+        hit_bits++;
+
+        if (hit_bits == 64)
         {
-            uint32_t str4 = *((uint32_t*) (inputBlock+i));
-
-            addhit = addHit(inputBlock, size, ctx->refhash, ctx->refhashcount, getHash(str4), str4, i, hitlen, hitidx, hitpos);
+            ctx->hits[hit_i++] = hit_buff;
+            hit_bits = 0;
         }
 
-        if (addhit && !((ctx->refhash[hitidx].hit_id == -1) && (ctx->refcount.id_cnt >= LZAAHE_MAX_SYMBOLS)))
+        if (hit)
         {
-            bitio_write_bit( ctx->io, 1 );
-            bitio_write_bit( ctx->io, hitlen == 4 );
-
-            if (hitlen != 4)
+            // encode length
+            if (hitlen == 4)
             {
-                if (hitlen < 8)
-                    writebits( ctx, hitlen-5, 2 );
-                else
-                {
-                    writebits( ctx, 3, 2 );
-                    writebits( ctx, hitlen-8, 7 );
-                }
-            }
-
-            if (ctx->refhash[hitidx].hit_id == -1)
-            {
-                ctx->refhash[hitidx].hit_id = ctx->refcount.id_cnt++;
-                bitio_write_bit( ctx->io, 1 );
-                writebits( ctx, hitpos, i_bits );
-
-                if (ctx->refcount.id_cnt != 0 && (ctx->refcount.id_cnt & ctx->refcount.id_mask) == 0)
-                {
-                    ctx->refcount.id_bits++;
-                    ctx->refcount.id_mask = (1 << ctx->refcount.id_bits) - 1;
-                }
+                lz_buff <<= 1;
+                lz_bits ++;
+                n_matches4++;
             }
             else
             {
-                bitio_write_bit( ctx->io, 0 );
-                writebits( ctx, ctx->refhash[hitidx].hit_id, ctx->refcount.id_bits );
+                lz_buff = (lz_buff << 8) | (128 + hitlen - 5);
+                lz_bits += 8;
+                n_matches++;
             }
+
+            // repeat symbol?
+            if (hitid != -1)
+            {
+                lz_buff = (lz_buff << 1) | 1;
+                lz_bits ++;
+                lz_buff = (lz_buff << ctx->id_bits) | hitid;
+                lz_bits += ctx->id_bits;
+            }
+            else // no, we have a new symbol
+            {
+                lz_buff <<= 1;
+                lz_bits ++;
+                lz_buff = (lz_buff << i_bits) | hitpos;
+                lz_bits += i_bits;
+            }
+
+            // flush bit buffer?
+            if (lz_bits > 31)
+            {
+                lz_bits -= 32;
+                ctx->lz_matches[lz_i++] = lz_buff >> lz_bits;
+            }
+
+            // increment the power of 2 of the current position?
+            if ((i != 0) && ((i+hitlen) > i_mask))
+            {
+                i_bits++;
+                i_mask = (1 << i_bits) - 1;
+            }
+
+            // go forward in the stream
+            i += hitlen;
+            n_matchlen += hitlen;
         }
         else
         {
-            bitio_write_bit( ctx->io, 0 );
-            writebits( ctx, inputBlock[i], 8 );
+            ctx->uncompressed_syms[uncompressed_i++] = inputBlock[i++];
         }
 
-        if ((i != 0) && ((i+hitlen) > i_mask))
+        while (i > i_mask)
         {
             i_bits++;
             i_mask = (1 << i_bits) - 1;
         }
 
-        i += hitlen;
+        assert( uncompressed_i <= LZAAHE_BLOCK_SZ );
     }
 
-    bitio_finalize( ctx->io );
+    // Flush
+    /*
+    if (lz_bits > 31)
+    {
+        lz_bits -= 32;
+        ctx->lz_matches[lz_i++] = lz_buff >> lz_bits;
+    }
+    */
+
+    assert( lz_bits < 32 );
+
+    if (lz_bits != 0)
+    {
+        ctx->lz_matches[lz_i++] = lz_buff << (32 - lz_bits);
+    }
+
+    if (hit_bits != 0)
+    {
+        ctx->hits[hit_i++] = hit_buff << (64 - lz_bits);
+    }
+
+    // Write output
+    outputBlock[3] = (uncompressed_i & 0xFF);
+    outputBlock[4] = ((uncompressed_i >> 8) & 0xFF);
+    outputBlock[5] = ((uncompressed_i >> 16) & 0xFF);
+
+    *outputSize += 3;
+
+    outputBlock[6] = (hit_i & 0xFF);
+    outputBlock[7] = ((hit_i >> 8) & 0xFF);
+    outputBlock[8] = ((hit_i >> 16) & 0xFF);
+
+    *outputSize += 3;
+
+    lzaahe_memcpy_overrun( outputBlock+*outputSize, ctx->uncompressed_syms, uncompressed_i );
+
+    *outputSize += uncompressed_i;
+
+    lzaahe_memcpy_overrun( outputBlock+*outputSize, ctx->hits, hit_i*8 );
+
+    *outputSize += hit_i*8;
+
+    lzaahe_memcpy_overrun( outputBlock+*outputSize, ctx->lz_matches, lz_i*4 );
+
+    *outputSize += lz_i*4;
+
+    printf( "%u -> %u | uncompressed_i %u rle_i %u lz_i %u id %u n_matches4 %u n_matches %u\n", size, *outputSize, uncompressed_i, hit_i*8, lz_i*4, ctx->id, n_matches4, n_matches );
 
     //analyzeResults(ctx);
-
-    *outputSize += bitio_getoutptr( ctx->io );
 }
 
