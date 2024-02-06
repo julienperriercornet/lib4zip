@@ -14,8 +14,6 @@ set(
     arith32.h
     arith64.h
     bitio.h
-    fse_utils.h
-    fse_utils.cpp
     lzaahe_common.h
     lzaahe_context.h
     lzaahe_context.cpp
