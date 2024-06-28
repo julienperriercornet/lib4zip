@@ -101,8 +101,8 @@ int main( int argc, const char** argv )
 {
     if (argc != 4)
     {
-        printf("lib4zip v0.1 alpha\n"
-        "(C) 2022-2023, Julien Perrier-cornet. Free software under GPLv3 Licence.\n"
+        printf("lib4zip v0.2 alpha\n"
+        "(C) 2022-2024, Julien Perrier-cornet. Free software under GPLv3 Licence.\n"
         "\n"
         "To compress/decompress: samplelib4zip c/d input output\n");
         return 1;

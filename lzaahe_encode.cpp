@@ -31,7 +31,7 @@
 
 static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t second, uint32_t decoded_size, uint32_t size )
 {
-    uint32_t maxmatchstrlen = 127+4+1;
+    uint32_t maxmatchstrlen = 127+4;
     maxmatchstrlen = (first+maxmatchstrlen < decoded_size) ? maxmatchstrlen : decoded_size-first;
     maxmatchstrlen = (second+maxmatchstrlen) < size ? maxmatchstrlen : size - second;
     maxmatchstrlen = (second-first) < maxmatchstrlen ? second-first : maxmatchstrlen;
@@ -44,7 +44,7 @@ static inline uint32_t matchlen( uint8_t *inbuff, uint32_t first, uint32_t secon
 
         while ((i != maxmatchstrlen) && (strfirst[i] == strsecond[i])) i++;
 
-        return i-1;
+        return i;
     }
     else
         return 1;
@@ -285,7 +285,7 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx, uint8_t *inp
     }
     */
 
-    assert( lz_bits < 32 );
+    assert( lz_bits <= 32 );
 
     if (lz_bits != 0)
     {
@@ -322,7 +322,7 @@ extern "C" void lzaaheEncode( struct LZAAHECompressionContext* ctx, uint8_t *inp
 
     *outputSize += lz_i*4;
 
-    printf( "%u -> %u | uncompressed_i %u rle_i %u lz_i %u id %u n_matches4 %u n_matches %u\n", size, *outputSize, uncompressed_i, hit_i*8, lz_i*4, ctx->id, n_matches4, n_matches );
+    //printf( "%u -> %u | uncompressed_i %u rle_i %u lz_i %u id %u n_matches4 %u n_matches %u\n", size, *outputSize, uncompressed_i, hit_i*8, lz_i*4, ctx->id, n_matches4, n_matches );
 
     //analyzeResults(ctx);
 }

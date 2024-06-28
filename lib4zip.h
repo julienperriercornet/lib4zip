@@ -23,6 +23,7 @@
 
 
 struct BitIOCtx;
+struct ArithCtx;
 
 
 #define LZAAHE_BLOCK_BITS (18)
@@ -95,6 +96,37 @@ extern "C" {
     struct LZAAHEDecompressionContext* lzaaheAllocateDecompression();
     void lzaaheDeallocateDecompression(struct LZAAHEDecompressionContext* ctx);
     void lzaaheDecode( struct LZAAHEDecompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize );
+
+#if defined (__cplusplus)
+}
+#endif
+
+
+#define LOS_BLOCK_BITS (30)
+#define LOS_BLOCK_SZ (1<<LOS_BLOCK_BITS)
+#define LOS_OUTPUT_SZ ((1<<LOS_BLOCK_BITS) + (1<<(LOS_BLOCK_BITS-2)))
+
+
+#pragma pack(1)
+struct LOSCompressionContext {
+    uint32_t *presence;
+    uint32_t *dictidx;
+    uint8_t *dict;
+    struct ArithCtx *arith;
+    uint32_t dictIdx;
+};
+#pragma pack()
+
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+    struct LOSCompressionContext* losAllocateContext();
+    void losDeallocateContext(struct LOSCompressionContext* ctx);
+
+    void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize );
+    void losDecode( struct LOSCompressionContext* ctx, uint8_t *inputBlock, uint8_t *outputBlock, uint32_t *outputSize, uint32_t inputSize );
 
 #if defined (__cplusplus)
 }

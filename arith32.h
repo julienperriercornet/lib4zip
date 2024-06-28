@@ -80,26 +80,33 @@ static inline int arith_getchar(struct ArithCtx* ctx)
 
 static inline void arith_putchar(struct ArithCtx* ctx, uint8_t b )
 {
-    if (ctx->buffer_idx < ctx->buffer_size) {
+    if (ctx->buffer_idx < ctx->buffer_size)
+    {
         ctx->buffer[ctx->buffer_idx++] = b;
     }
 }
 
 
-static inline int arith_bit_read(struct ArithCtx* ctx) {
-    if (ctx->bits_in_B == 0) {
-        ctx->B = arith_getchar(ctx); // EOF is OK
+static inline int arith_bit_read(struct ArithCtx* ctx)
+{
+    if (ctx->bits_in_B == 0)
+    {
+        ctx->B = arith_getchar(ctx);
         ctx->bits_in_B = 8;
     }
-    ctx->bits_in_B--; //7..0
+
+    ctx->bits_in_B--; // 7..0
     return (ctx->B >> ctx->bits_in_B) & 1;
 }
 
 
-static inline void arith_bit_write(struct ArithCtx* ctx, const int bit) {
+static inline void arith_bit_write(struct ArithCtx* ctx, const int bit)
+{
     ctx->B = (ctx->B << 1) | bit;
     ctx->bits_in_B++;
-    if (ctx->bits_in_B == 8) {
+
+    if (ctx->bits_in_B == 8)
+    {
         arith_putchar(ctx, ctx->B);
         ctx->B = 0;
         ctx->bits_in_B = 0;
@@ -107,22 +114,27 @@ static inline void arith_bit_write(struct ArithCtx* ctx, const int bit) {
 }
 
 
-static inline void arith_bit_write_with_pending(struct ArithCtx* ctx, const int bit) {
+static inline void arith_bit_write_with_pending(struct ArithCtx* ctx, const int bit)
+{
     arith_bit_write(ctx, bit);
     for (; ctx->pending_bits > 0; ctx->pending_bits--)
         arith_bit_write(ctx, bit ^ 1);
 }
 
 
-static void arith_finalize(struct ArithCtx* ctx) {
-    do {
+static void arith_finalize(struct ArithCtx* ctx)
+{
+    do
+    {
         arith_bit_write_with_pending(ctx, ctx->a >> 31); // output pending byte from a
         ctx->a <<= 1;
-    } while (ctx->bits_in_B != 0);
+    }
+    while (ctx->bits_in_B != 0);
 }
 
 
-static void arith_prefetch(struct ArithCtx* ctx) {
+static void arith_prefetch(struct ArithCtx* ctx)
+{
     for (int i = 0; i < 32; ++i)
         ctx->x = (ctx->x << 1) | arith_bit_read(ctx);
 }

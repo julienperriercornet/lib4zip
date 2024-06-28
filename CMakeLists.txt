@@ -9,10 +9,10 @@ include(CTest)
 
 set(
     SOURCE_FILES
-    lib4zip.h
     arith.h
     arith32.h
     arith64.h
+    lib4zip.h
     bitio.h
     lzaahe_common.h
     lzaahe_context.h
@@ -23,6 +23,12 @@ set(
     lzaahe_encode.cpp
     lzaahe_decode.h
     lzaahe_decode.cpp
+    los_context.h
+    los_context.cpp
+    los_decode.cpp
+    los_decode.h
+    los_encode.cpp
+    los_encode.h
     platform.h)
 
 add_library( 4zip STATIC ${SOURCE_FILES} )
