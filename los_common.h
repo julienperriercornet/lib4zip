@@ -22,6 +22,14 @@
 #include "arith.h"
 
 
+static void init( struct LOSCompressionContext* ctx )
+{
+    memset( ctx->presence, 0, 64*(1<<24) );
+    memset( ctx->dictidx, -1, sizeof(uint32_t)*(1<<24) );
+    ctx->dictIdx = 0;
+}
+
+
 static inline uint32_t los_probaGamble( uint32_t sum_1, uint32_t sum )
 {
     if (sum_1 == 0) return 0;

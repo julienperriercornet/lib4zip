@@ -26,7 +26,7 @@
 #include "los_encode.h"
 #include "los_common.h"
 
-
+#if 0
 #if _MSC_VER
 #include <intrin.h>
 #else
@@ -35,14 +35,232 @@
 
 
 static __m256i constant_1 = _mm256_set1_epi32( 1 );
+#endif
 
 
 
-static void init( struct LOSCompressionContext* ctx )
+static void los_encodeByteStats1(uint8_t current, uint8_t* dict, struct ArithCtx* arith)
 {
-    memset( ctx->presence, 0, 128*(1<<24) );
-    memset( ctx->dictidx, -1, sizeof(uint32_t)*(1<<24) );
-    ctx->dictIdx = 0;
+    uint32_t sum[8] = { 0 }, sum_1[8] = { 0 };
+
+    for (uint32_t i=0; i<256; i++)
+    {
+        sum[0] += dict[i];
+        if ((i & 1) != 0) sum_1[0] += dict[i];
+    }
+
+    for (uint32_t i=current&1; i<256; i+=2)
+    {
+        sum[1] += dict[i];
+        if ((i & 2) != 0) sum_1[1] += dict[i];
+    }
+
+    for (uint32_t i=current&3; i<256; i+=4)
+    {
+        sum[2] += dict[i];
+        if ((i & 4) != 0) sum_1[2] += dict[i];
+    }
+
+    for (uint32_t i=current&7; i<256; i+=8)
+    {
+        sum[3] += dict[i];
+        if ((i & 8) != 0) sum_1[3] += dict[i];
+    }
+
+    for (uint32_t i=current&15; i<256; i+=16)
+    {
+        sum[4] += dict[i];
+        if ((i & 16) != 0) sum_1[4] += dict[i];
+    }
+
+    for (uint32_t i=current&31; i<256; i+=32)
+    {
+        sum[5] += dict[i];
+        if ((i & 32) != 0) sum_1[5] += dict[i];
+    }
+
+    for (uint32_t i=current&63; i<256; i+=64)
+    {
+        sum[6] += dict[i];
+        if ((i & 64) != 0) sum_1[6] += dict[i];
+    }
+
+    for (uint32_t i=current&127; i<256; i+=128)
+    {
+        sum[7] += dict[i];
+        if ((i & 128) != 0) sum_1[7] += dict[i];
+    }
+
+    for (uint32_t i=0; i<8; i++)
+    {
+        arith_encodebit( arith, los_probaGamble( sum_1[i], sum[i] ), (current & (1 << i)) != 0 );
+    }
+}
+
+
+static void los_encodeByteStats0(uint8_t current, uint32_t* first, struct ArithCtx* arith)
+{
+    uint32_t sum[8] = { 0 }, sum_1[8] = { 0 };
+
+    for (uint32_t i=0; i<256; i++)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[0] += stat;
+        if ((i & 1) != 0) sum_1[0] += stat;
+    }
+
+    for (uint32_t i=current&1; i<256; i+=2)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[1] += stat;
+        if ((i & 2) != 0) sum_1[1] += stat;
+    }
+
+    for (uint32_t i=current&3; i<256; i+=4)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[2] += stat;
+        if ((i & 4) != 0) sum_1[2] += stat;
+    }
+
+    for (uint32_t i=current&7; i<256; i+=8)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[3] += stat;
+        if ((i & 8) != 0) sum_1[3] += stat;
+    }
+
+    for (uint32_t i=current&15; i<256; i+=16)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[4] += stat;
+        if ((i & 16) != 0) sum_1[4] += stat;
+    }
+
+    for (uint32_t i=current&31; i<256; i+=32)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[5] += stat;
+        if ((i & 32) != 0) sum_1[5] += stat;
+    }
+
+    for (uint32_t i=current&63; i<256; i+=64)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[6] += stat;
+        if ((i & 64) != 0) sum_1[6] += stat;
+    }
+
+    for (uint32_t i=current&127; i<256; i+=128)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) != 0 ? 1 : 0;
+        sum[7] += stat;
+        if ((i & 128) != 0) sum_1[7] += stat;
+    }
+
+    for (uint32_t i=0; i<8; i++)
+    {
+        arith_encodebit( arith, los_probaGamble( sum_1[i], sum[i] ), (current & (1 << i)) != 0 );
+    }
+}
+
+
+static void los_encodeByteNHit(uint8_t current, uint32_t* first, struct ArithCtx* arith)
+{
+    uint32_t sum[8] = { 0 }, sum_1[8] = { 0 };
+
+    for (uint32_t i=0; i<256; i++)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[0] += stat;
+        if ((i & 1) != 0) sum_1[0] += stat;
+    }
+
+    for (uint32_t i=current&1; i<256; i+=2)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[1] += stat;
+        if ((i & 2) != 0) sum_1[1] += stat;
+    }
+
+    for (uint32_t i=current&3; i<256; i+=4)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[2] += stat;
+        if ((i & 4) != 0) sum_1[2] += stat;
+    }
+
+    for (uint32_t i=current&7; i<256; i+=8)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[3] += stat;
+        if ((i & 8) != 0) sum_1[3] += stat;
+    }
+
+    for (uint32_t i=current&15; i<256; i+=16)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[4] += stat;
+        if ((i & 16) != 0) sum_1[4] += stat;
+    }
+
+    for (uint32_t i=current&31; i<256; i+=32)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[5] += stat;
+        if ((i & 32) != 0) sum_1[5] += stat;
+    }
+
+    for (uint32_t i=current&63; i<256; i+=64)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[6] += stat;
+        if ((i & 64) != 0) sum_1[6] += stat;
+    }
+
+    for (uint32_t i=current&127; i<256; i+=128)
+    {
+        uint32_t bit = 1 << (i & 0x1F);
+        uint32_t ind = i >> 5;
+        uint32_t stat = (first[ind] & bit) == 0 ? 1 : 0;
+        sum[7] += stat;
+        if ((i & 128) != 0) sum_1[7] += stat;
+    }
+
+    for (uint32_t i=0; i<8; i++)
+    {
+        arith_encodebit( arith, los_probaGamble( sum_1[i], sum[i] ), (current & (1 << i)) != 0 );
+    }
 }
 
 
@@ -60,12 +278,15 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
 
     init( ctx );
 
-    arith_init( ctx->arith, outputBlock+4, (*outputSize)+4 );
+    arith_init( ctx->arith, outputBlock+4, inputSize+inputSize/4-4 );
 
     uint32_t i = 0;
     uint32_t accum = 0;
-    uint32_t bhit0 = 128, bhit1 = 0; // Avoid divide by 0 when encoding the first byte
+    uint32_t bhit0 = 256, bhit1 = 1; // Avoid divide by 0 when encoding the first byte
     // At the start of the stream we get no hits usually so we speculate accordingly
+
+    // Metrics
+    uint32_t nRenormalizations = 0;
 
     while (i < size)
     {
@@ -99,11 +320,25 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
         if (bhit) bhit1++;
         else bhit0++;
 
-        // Renormalization of bhit stats
-        if (bhit1 == 256 || bhit0 == 256)
+        // Renormalization of bhit stats. This creates a sliding "window" of statistics for this specific bit
+        if (bhit1 == 65536 || bhit0 == 65536)
         {
-            bhit1 >>= 1;
-            bhit0 >>= 1;
+            bhit1 = (bhit1 >> 1) | 1;
+            bhit0 = (bhit0 >> 1) | 1;
+        }
+
+        // Encode byte
+        if (bhit && d != 0xFFFFFFFF)
+        {
+            los_encodeByteStats1(current, ctx->dict+d, ctx->arith);
+        }
+        else if (bhit && d == 0xFFFFFFFF)
+        {
+            los_encodeByteStats0(current, first, ctx->arith);
+        }
+        else
+        {
+            los_encodeByteNHit(current, first, ctx->arith);
         }
 
         // Update stats
@@ -121,13 +356,15 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
                 {
                     if (ctx->dict[d+i] == 1)
                     {
-                        // This hit is going to be erased so we reset the bit fields as well (necessary? for correctness yes but not 100% sure)
+                        // This hit is going to be erased so we reset the bit field as well
                         second[ind] &= ~bit;
                         first[ind] &= ~bit;
                     }
 
                     ctx->dict[d+i] >>= 1;
                 }
+
+                nRenormalizations++;
             }
 
             ctx->dict[d+current]++;
@@ -156,6 +393,9 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
         i++;
     }
 
+    printf( "contexts: %u renormalisations: %u\n", ctx->dictIdx/256, nRenormalizations );
+
+    arith_finalize(ctx->arith);
     *outputSize += arith_getoutptr(ctx->arith);
 }
 

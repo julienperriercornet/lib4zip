@@ -32,7 +32,7 @@ void compress( FILE* in, FILE* out )
 
     struct LZAAHECompressionContext* ctx = lzaaheAllocateCompression();
 
-    if (ctx)
+    if (ctx && inbuff && outbuff)
     {
         fseek( in, 0, SEEK_END );
         size_t remainsz = ftell( in );
@@ -60,6 +60,42 @@ void compress( FILE* in, FILE* out )
 
     if (outbuff != nullptr) align_free(outbuff);
     if (inbuff != nullptr) align_free(inbuff);
+}
+
+
+void compressLos( FILE* in, FILE* out )
+{
+    struct LOSCompressionContext* ctx = losAllocateContext();
+
+    if (ctx)
+    {
+        fseek( in, 0, SEEK_END );
+        size_t filesize = ftell( in );
+        fseek( in, 0, SEEK_SET );
+
+        uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, filesize*sizeof(uint8_t) );
+        uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, (filesize+filesize/4)*sizeof(uint8_t) );
+
+        if ( inbuff && outbuff && filesize > 0 && filesize == fread( inbuff, 1, filesize, in ) )
+        {
+            uint32_t outputSize;
+
+            losEncode( ctx, inbuff, outbuff, &outputSize, filesize );
+
+            printf("outputSize : %u\n", outputSize);
+
+            fputc(outputSize & 0xFF, out);
+            fputc(((outputSize >> 8) & 0xFF), out);
+            fputc(((outputSize >> 16) & 0xFF), out);
+            fputc(((outputSize >> 24) & 0xFF), out);
+            fwrite( outbuff, 1, outputSize, out );
+        }
+
+        if (outbuff != nullptr) align_free(outbuff);
+        if (inbuff != nullptr) align_free(inbuff);
+    }
+
+    if (ctx) losDeallocateContext(ctx);
 }
 
 
@@ -97,6 +133,47 @@ void decompress( FILE* in, FILE* out )
 }
 
 
+void decompressLos( FILE* in, FILE* out )
+{
+    struct LOSCompressionContext* ctx = losAllocateContext();
+
+    if (ctx)
+    {
+        do
+        {
+            uint32_t to_read = fgetc(in);
+            to_read += fgetc(in) << 8;
+            to_read += fgetc(in) << 16;
+            to_read += fgetc(in) << 24;
+
+            uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, to_read );
+
+            if (inbuff && to_read > 0 && to_read < LZAAHE_OUTPUT_SZ && to_read == fread( inbuff, 1, to_read, in ))
+            {
+                uint32_t outputSize = inbuff[0];
+                outputSize += inbuff[1] << 8;
+                outputSize += inbuff[2] << 16;
+                outputSize += inbuff[3] << 24;
+
+                uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, outputSize );
+
+                if (outbuff)
+                {
+                    losDecode( ctx, inbuff, outbuff, &outputSize, to_read );
+                    fwrite( outbuff, 1, outputSize, out );
+                    align_free(outbuff);
+                }
+            }
+
+            if (inbuff != nullptr) align_free(inbuff);
+        }
+        while ( !feof(in) ) ;
+    }
+
+    if (ctx) losDeallocateContext(ctx);
+}
+
+
 int main( int argc, const char** argv )
 {
     if (argc != 4)
@@ -117,9 +194,9 @@ int main( int argc, const char** argv )
     clock_t start = clock();
 
     if (argv[1][0] == 'c')
-        compress(in, out);
+        compressLos(in, out);
     else if (argv[1][0] == 'd')
-        decompress(in, out);
+        decompressLos(in, out);
 
     printf("%s (%ld) -> %s (%ld) in %.3fs\n",
         argv[2], ftell(in), argv[3], ftell(out),

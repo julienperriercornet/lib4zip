@@ -102,12 +102,11 @@ extern "C" {
 #endif
 
 
-#define LOS_BLOCK_BITS (30)
+#define LOS_BLOCK_BITS (20)
 #define LOS_BLOCK_SZ (1<<LOS_BLOCK_BITS)
 #define LOS_OUTPUT_SZ ((1<<LOS_BLOCK_BITS) + (1<<(LOS_BLOCK_BITS-2)))
 
 
-#pragma pack(1)
 struct LOSCompressionContext {
     uint32_t *presence;
     uint32_t *dictidx;
@@ -115,7 +114,6 @@ struct LOSCompressionContext {
     struct ArithCtx *arith;
     uint32_t dictIdx;
 };
-#pragma pack()
 
 
 #if defined (__cplusplus)
