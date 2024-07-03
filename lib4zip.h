@@ -113,6 +113,7 @@ struct LOSCompressionContext {
     uint8_t *dict;
     struct ArithCtx *arith;
     uint32_t dictIdx;
+    uint32_t dictSz;
 };
 
 

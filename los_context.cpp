@@ -47,8 +47,9 @@ extern "C" struct LOSCompressionContext* losAllocateContext()
 
         context->presence = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, 64*(1<<24) );
         context->dictidx = (uint32_t*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(uint32_t)*(1<<24) );
-        context->dict = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, 64*(1<<24) );
+        context->dict = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, (1<<24) );
         context->arith = (struct ArithCtx*) align_alloc( MAX_CACHE_LINE_SIZE, sizeof(struct ArithCtx) );
+        context->dictSz = 1<<24;
 
         if (!context->presence || !context->dictidx || !context->dict || !context->arith)
         {

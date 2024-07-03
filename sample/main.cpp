@@ -74,7 +74,7 @@ void compressLos( FILE* in, FILE* out )
         fseek( in, 0, SEEK_SET );
 
         uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, filesize*sizeof(uint8_t) );
-        uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, (filesize+filesize/4)*sizeof(uint8_t) );
+        uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, (filesize+filesize/8)*sizeof(uint8_t) );
 
         if ( inbuff && outbuff && filesize > 0 && filesize == fread( inbuff, 1, filesize, in ) )
         {
@@ -82,12 +82,11 @@ void compressLos( FILE* in, FILE* out )
 
             losEncode( ctx, inbuff, outbuff, &outputSize, filesize );
 
-            printf("outputSize : %u\n", outputSize);
+            fputc(filesize & 0xFF, out);
+            fputc(((filesize >> 8) & 0xFF), out);
+            fputc(((filesize >> 16) & 0xFF), out);
+            fputc(((filesize >> 24) & 0xFF), out);
 
-            fputc(outputSize & 0xFF, out);
-            fputc(((outputSize >> 8) & 0xFF), out);
-            fputc(((outputSize >> 16) & 0xFF), out);
-            fputc(((outputSize >> 24) & 0xFF), out);
             fwrite( outbuff, 1, outputSize, out );
         }
 
@@ -139,38 +138,33 @@ void decompressLos( FILE* in, FILE* out )
 
     if (ctx)
     {
-        do
+        fseek( in, 0, SEEK_END );
+        size_t to_read = ftell( in );
+        fseek( in, 0, SEEK_SET );
+
+        uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, to_read );
+
+        if (inbuff && to_read > 0 && to_read == fread( inbuff, 1, to_read, in ))
         {
-            uint32_t to_read = fgetc(in);
-            to_read += fgetc(in) << 8;
-            to_read += fgetc(in) << 16;
-            to_read += fgetc(in) << 24;
+            uint32_t outputSize = inbuff[0];
+            outputSize += inbuff[1] << 8;
+            outputSize += inbuff[2] << 16;
+            outputSize += inbuff[3] << 24;
 
-            uint8_t* inbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, to_read );
+            uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, outputSize );
 
-            if (inbuff && to_read > 0 && to_read < LZAAHE_OUTPUT_SZ && to_read == fread( inbuff, 1, to_read, in ))
+            if (outbuff)
             {
-                uint32_t outputSize = inbuff[0];
-                outputSize += inbuff[1] << 8;
-                outputSize += inbuff[2] << 16;
-                outputSize += inbuff[3] << 24;
-
-                uint8_t* outbuff = (uint8_t*) align_alloc( MAX_CACHE_LINE_SIZE, outputSize );
-
-                if (outbuff)
-                {
-                    losDecode( ctx, inbuff, outbuff, &outputSize, to_read );
-                    fwrite( outbuff, 1, outputSize, out );
-                    align_free(outbuff);
-                }
+                losDecode( ctx, inbuff+4, outbuff, &outputSize, to_read-4 );
+                fwrite( outbuff, 1, outputSize, out );
+                align_free( outbuff );
             }
-
-            if (inbuff != nullptr) align_free(inbuff);
         }
-        while ( !feof(in) ) ;
-    }
 
-    if (ctx) losDeallocateContext(ctx);
+        if (inbuff != nullptr) align_free( inbuff );
+
+        losDeallocateContext(ctx);
+    }
 }
 
 

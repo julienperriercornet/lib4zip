@@ -25,18 +25,7 @@
 
 #include "los_encode.h"
 #include "los_common.h"
-
-#if 0
-#if _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-
-
-static __m256i constant_1 = _mm256_set1_epi32( 1 );
-#endif
-
+#include "los_context.h"
 
 
 static void los_encodeByteStats1(uint8_t current, uint8_t* dict, struct ArithCtx* arith)
@@ -278,11 +267,11 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
 
     init( ctx );
 
-    arith_init( ctx->arith, outputBlock+4, inputSize+inputSize/4-4 );
+    arith_init( ctx->arith, outputBlock+4, inputSize+(inputSize/8)-4 );
 
     uint32_t i = 0;
     uint32_t accum = 0;
-    uint32_t bhit0 = 256, bhit1 = 1; // Avoid divide by 0 when encoding the first byte
+    uint32_t bhit0 = LOS_BHIT_RENORM_TRSH/2, bhit1 = 1; // Avoid divide by 0 when encoding the first byte
     // At the start of the stream we get no hits usually so we speculate accordingly
 
     // Metrics
@@ -321,10 +310,10 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
         else bhit0++;
 
         // Renormalization of bhit stats. This creates a sliding "window" of statistics for this specific bit
-        if (bhit1 == 65536 || bhit0 == 65536)
+        if (bhit1 == LOS_BHIT_RENORM_TRSH || bhit0 == LOS_BHIT_RENORM_TRSH)
         {
-            bhit1 = (bhit1 >> 1) | 1;
-            bhit0 = (bhit0 >> 1) | 1;
+            if (bhit1 > 1) bhit1 >>= 1;
+            if (bhit0 > 1) bhit0 >>= 1;
         }
 
         // Encode byte
@@ -354,14 +343,17 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
                 // Renormalize byte stats
                 for (uint32_t i=0; i<256; i++)
                 {
+                    /*
                     if (ctx->dict[d+i] == 1)
                     {
                         // This hit is going to be erased so we reset the bit field as well
                         second[ind] &= ~bit;
                         first[ind] &= ~bit;
                     }
+                    */
 
-                    ctx->dict[d+i] >>= 1;
+                    if (ctx->dict[d+i] > 1)
+                        ctx->dict[d+i] >>= 1;
                 }
 
                 nRenormalizations++;
@@ -371,7 +363,7 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
         }
         else if (atleasttwo != 0)
         {
-            if (d == 0xFFFFFFFF)
+            if (d == 0xFFFFFFFF && ctx->dictIdx < ctx->dictSz)
             {
                 // Create a new byte stat array (yes, this is how you allocate memory in the fastest way possible)
                 ctx->dictidx[dind] = ctx->dictIdx;
@@ -386,6 +378,19 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
                 }
 
                 ctx->dict[d+current] = 2;
+
+                if (ctx->dictIdx == ctx->dictSz && ctx->dictSz < (1 << 31))
+                {
+                    uint8_t* olddict = ctx->dict;
+                    ctx->dict = (uint8_t*) align_alloc(MAX_CACHE_LINE_SIZE, ctx->dictSz*2);
+
+                    if (ctx->dict)
+                    {
+                        memcpy(ctx->dict, olddict, ctx->dictSz);
+                        align_free(olddict);
+                        ctx->dictSz *= 2;
+                    }
+                }
             }
         }
 
@@ -393,9 +398,10 @@ extern "C" void losEncode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
         i++;
     }
 
-    printf( "contexts: %u renormalisations: %u\n", ctx->dictIdx/256, nRenormalizations );
+    //printf( "ctxt mem: %uM\n", ctx->dictIdx>>20 );
 
     arith_finalize(ctx->arith);
+
     *outputSize += arith_getoutptr(ctx->arith);
 }
 

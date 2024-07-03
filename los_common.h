@@ -20,12 +20,13 @@
 
 #include <cassert>
 #include "arith.h"
+#include "aligned_string.h"
 
 
 static void init( struct LOSCompressionContext* ctx )
 {
-    memset( ctx->presence, 0, 64*(1<<24) );
-    memset( ctx->dictidx, -1, sizeof(uint32_t)*(1<<24) );
+    aligned_memset( ctx->presence, 0, 64*(1<<24) );
+    aligned_memset( ctx->dictidx, -1, sizeof(uint32_t)*(1<<24) );
     ctx->dictIdx = 0;
 }
 

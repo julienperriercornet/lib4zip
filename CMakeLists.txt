@@ -5,10 +5,21 @@ project(
     VERSION 0.02
     LANGUAGES CXX)
 
+option(AVX2 "Build with Avx2 optimisations" OFF)
+    
 include(CTest)
+
+if (AVX2)
+add_definitions(-mavx2)
+add_definitions(-DAVX2)
+message( "AVX2 enabled" )
+else()
+message( "AVX2 disabled" )
+endif()
 
 set(
     SOURCE_FILES
+    aligned_string.h
     arith.h
     arith32.h
     arith64.h

@@ -22,3 +22,5 @@
 #include "arith.h"
 #include "platform.h"
 
+
+#define LOS_BHIT_RENORM_TRSH 2048
