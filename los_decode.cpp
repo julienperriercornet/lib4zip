@@ -406,7 +406,7 @@ extern "C" void losDecode( struct LOSCompressionContext* ctx, uint8_t *inputBloc
 
                     if (ctx->dict)
                     {
-                        memcpy(ctx->dict, olddict, ctx->dictSz);
+                        aligned_memcpy(ctx->dict, olddict, ctx->dictSz);
                         align_free(olddict);
                         ctx->dictSz *= 2;
                     }

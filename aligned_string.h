@@ -22,7 +22,7 @@ static inline void aligned_memcpy(void* dst, void* src, size_t sz)
         _mm256_store_si256( (__m256i*) destination, _mm256_load_si256((__m256i*) source) );
         source += 32;
         destination += 32;
-    } while (src < end) ;
+    } while (source < end) ;
 }
 
 static inline void aligned_memset(void* dst, uint32_t elem, size_t sz)
